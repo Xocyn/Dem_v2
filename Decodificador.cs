@@ -59,6 +59,45 @@ namespace Dem_v2
             return true;
         }
 
+        public static bool TryDeco(string mensaje10Bits, out int valor)
+        {
+            valor = 0;
+
+            // validar longitud
+            if (mensaje10Bits.Length != 10)
+                return false;
+
+            // validar caracteres
+            foreach (char c in mensaje10Bits)
+                if (c != '0' && c != '1')
+                    return false;
+
+            // separar partes
+            string datosStr = mensaje10Bits.Substring(0, 7);
+            string controlStr = mensaje10Bits.Substring(7, 3);
+
+            int datos = Convert.ToInt32(datosStr, 2);
+            int control = Convert.ToInt32(controlStr, 2);
+
+            int val = 0;
+            int ceros = 0;
+
+            for (int i = 0; i < 7; i++)
+            {
+                int bit = (datos >> i) & 1;   // lee LSB → MSB
+                val |= bit << (6 - i);        // asigna peso invertido
+
+                if (bit == 0)
+                    ceros++;
+            }
+
+            if (ceros != control)
+                return false;
+
+            valor = val;
+            return true;
+        }
+
         public static bool DxRx(string input, int i) // verificia si Dx y Rx son iguales
         { 
             string ventana = input.Substring(i, 10);

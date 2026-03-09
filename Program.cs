@@ -39,15 +39,15 @@ namespace Dem_v2
 
             bool locked = false;
 
-            // ejemplo de secuencia de sincronismo
-            StringBuilder dot = new StringBuilder();
-            for (int i = 0; i <= 100; i += 1)
-            {
-                dot.Append(i % 2 == 0 ? "0" : "1");
-            }
-            string syncPattern = dot.ToString();
+            //// ejemplo de secuencia de sincronismo
+            //StringBuilder dot = new StringBuilder();
+            //for (int i = 0; i <= 10; i += 1)
+            //{
+            //    dot.Append(i % 2 == 0 ? "0" : "1");
+            //}
+            string syncPattern =  "0101010101" ;
 
-            int frameLength = 600; // longitud estimada del mensaje
+            int frameLength = 10; // longitud estimada del mensaje
 
             waveIn.DataAvailable += (s, a) =>
             {
@@ -76,13 +76,17 @@ namespace Dem_v2
 
                         if (frameBuffer.Length >= frameLength)
                         {
-                           
-                            ProcesarBits(frameBuffer.ToString());
+                            if (Decodificador.TryDeco(frameBuffer.ToString(), out int valor))
+                            { 
+                                Console.WriteLine($"Mensaje decodificado: {valor}");
+                            }
+                            //ProcesarBits(frameBuffer.ToString());
 
                             // reset
                             locked = false;
-                            syncBuffer.Clear();
-                            frameBuffer.Clear();
+                            //syncBuffer.Clear();
+                            frameBuffer.Remove(0, 1);
+
                         }
                     }
                 }
