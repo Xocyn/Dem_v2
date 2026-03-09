@@ -13,171 +13,92 @@ namespace Dem_v2
 {
     internal class Program
     {
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Dispositivos de entrada disponibles:\n");
+        Console.WriteLine("Dispositivos de entrada disponibles:\n");
 
-            for (int i = 0; i < WaveInEvent.DeviceCount; i++)
+        for (int i = 0; i < WaveInEvent.DeviceCount; i++)
+        {
+            var caps = WaveInEvent.GetCapabilities(i);
+            Console.WriteLine($"{i}: {caps.ProductName}");
+        }
+
+        Console.WriteLine("\nSeleccione el numero del dispositivo:");
+        int device = int.Parse(Console.ReadLine());
+
+        WaveInEvent waveIn = new WaveInEvent();
+        waveIn.DeviceNumber = device;
+        waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
+
+        BFSKDemodulator demod = new BFSKDemodulator();
+
+        StringBuilder syncBuffer = new StringBuilder();
+        string syncPattern = "01010101010101010101010101";
+
+        bool grabando = false;
+
+        WaveFileWriter writer = null;
+
+        waveIn.DataAvailable += (s, a) =>
+        {
+            string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
+
+            foreach (char bit in bits)
             {
-                var caps = WaveInEvent.GetCapabilities(i);
-                Console.WriteLine($"{i}: {caps.ProductName}");
-            }
-
-            Console.WriteLine("\nSeleccione el numero del dispositivo:");
-            int device = int.Parse(Console.ReadLine());
-
-            WaveInEvent waveIn = new WaveInEvent();
-
-            waveIn.DeviceNumber = device;
-            waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
-
-            BFSKDemodulator demod = new BFSKDemodulator();
-
-            // buffers de bits
-            StringBuilder syncBuffer = new StringBuilder();
-            StringBuilder frameBuffer = new StringBuilder();
-
-            bool locked = false;
-
-            //// ejemplo de secuencia de sincronismo
-            //StringBuilder dot = new StringBuilder();
-            //for (int i = 0; i <= 10; i += 1)
-            //{
-            //    dot.Append(i % 2 == 0 ? "0" : "1");
-            //}
-            string syncPattern =  "0101010101" ;
-
-            int frameLength = 10; // longitud estimada del mensaje
-
-            waveIn.DataAvailable += (s, a) =>
-            {
-                string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
-
-                foreach (char bit in bits)
+                if (!grabando)
                 {
-                    if (!locked)
+                    syncBuffer.Append(bit);
+
+                    if (syncBuffer.Length > syncPattern.Length)
+                        syncBuffer.Remove(0, 1);
+
+                    if (syncBuffer.ToString() == syncPattern)
                     {
-                        syncBuffer.Append(bit);
+                        Console.WriteLine("DOT PATTERN DETECTADO");
 
-                        if (syncBuffer.Length > syncPattern.Length)
-                            syncBuffer.Remove(0, 1);
+                        grabando = true;
 
-                        if (syncBuffer.ToString() == syncPattern)
-                        {
-                            Console.WriteLine("DOT PATTERN DETECTADO");
+                        string fileName = "debug_audio.wav";
 
-                            locked = true;
-                            frameBuffer.Clear();
-                        }
-                    }
-                    else
-                    {
-                        frameBuffer.Append(bit);
+                        writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
 
-                        if (frameBuffer.Length >= frameLength)
-                        {
-                            if (Decodificador.TryDeco(frameBuffer.ToString(), out int valor))
-                            { 
-                                Console.WriteLine($"Mensaje decodificado: {valor}");
-                            }
-                            //ProcesarBits(frameBuffer.ToString());
-
-                            // reset
-                            locked = false;
-                            //syncBuffer.Clear();
-                            frameBuffer.Remove(0, 1);
-
-                        }
+                        Console.WriteLine($"Grabando audio en {fileName}");
                     }
                 }
+            }
 
-
-            };
-
-            waveIn.RecordingStopped += (s, a) =>
+            if (grabando && writer != null)
             {
-                Console.WriteLine("Grabación detenida");
-            };
+                writer.Write(a.Buffer, 0, a.BytesRecorded);
+            }
+        };
 
-            Console.WriteLine("\nGrabando... hable al micrófono.");
-            Console.WriteLine("Presione ENTER para detener.\n");
-
-            waveIn.StartRecording();
-
-            Console.ReadLine();
-
-            waveIn.StopRecording();
-        }
-        //static void Main(string[] args)
-        //{
-        //    Console.WriteLine("Dispositivos de entrada disponibles:\n");
-
-        //    for (int i = 0; i < WaveInEvent.DeviceCount; i++)
-        //    {
-        //        var caps = WaveInEvent.GetCapabilities(i);
-        //        Console.WriteLine($"{i}: {caps.ProductName}");
-        //    }
-
-        //    Console.WriteLine("\nSeleccione el numero del dispositivo:");
-        //    int device = int.Parse(Console.ReadLine());
-
-        //    WaveInEvent waveIn = new WaveInEvent();
-
-        //    waveIn.DeviceNumber = device;
-        //    waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
-        //    BFSKDemodulator demod = new BFSKDemodulator();
-
-        //    waveIn.DataAvailable += (s, a) =>
-        //    {
-        //        short max = 0;
-        //        string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
-
-        //        Console.WriteLine(bits);
-
-        //        for (int i = 0; i < a.BytesRecorded; i += 2)
-        //        {
-        //            short sample = BitConverter.ToInt16(a.Buffer, i);
-
-        //            if (Math.Abs(sample) > max)
-        //                max = Math.Abs(sample);
-        //        }
-
-        //        Console.WriteLine($"Nivel audio: {max}");  // ACA DEBERIA AGREGAR EL DEMODULADOR 
-        //    };
-
-        //      // medición de nivel de audio
-        //      short max = 0;
-
-        //      for (int i = 0; i < a.BytesRecorded; i += 2)
-        //      {
-        //          short sample = BitConverter.ToInt16(a.Buffer, i);
-
-        //           if (Math.Abs(sample) > max)
-        //              max = Math.Abs(sample);
-        //      }
-
-        //Console.WriteLine($"Nivel audio: {max}");
-
-        //    waveIn.RecordingStopped += (s, a) =>
-        //    {
-        //        Console.WriteLine("Grabación detenida");
-        //    };
-
-        //    Console.WriteLine("\nGrabando... hable al micrófono.");
-        //    Console.WriteLine("Presione ENTER para detener.\n");
-
-        //    waveIn.StartRecording();
-
-        //    Console.ReadLine();
-
-        //    waveIn.StopRecording();
-        //}
-
-
-        //string input = BFSKDemodulator.DemodulateToString(pathx);
-
-        public static void ProcesarBits(string input)
+        waveIn.RecordingStopped += (s, a) =>
         {
+            writer?.Dispose();
+            Console.WriteLine("Archivo WAV guardado.");
+            Console.WriteLine("Grabación detenida");
+        };
+
+        Console.WriteLine("\nEscuchando micrófono...");
+        Console.WriteLine("Presione ENTER para detener la grabación.\n");
+
+        waveIn.StartRecording();
+
+        Console.ReadLine();
+
+        waveIn.StopRecording();
+
+        ProcesarBits();
+        }
+
+    public static void ProcesarBits()
+
+        {
+            string pathx = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_audio.wav");
+            string input = BFSKDemodulator.DemodulateToString(pathx);
+
             List<(int Index, int Value)> encontrados = new List<(int, int)>();
             int i = 0;
 
