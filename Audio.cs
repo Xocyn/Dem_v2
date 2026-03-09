@@ -20,10 +20,12 @@ public class BFSKDemodulator
 
     List<short> sampleBuffer = new List<short>();
 
-    StringBuilder bits = new StringBuilder();
+
 
     public string ProcessAudio(byte[] buffer, int bytesRecorded)
     {
+        StringBuilder newBits = new StringBuilder();
+
         int samples = bytesRecorded / 2;
 
         for (int i = 0; i < samples; i++)
@@ -39,12 +41,12 @@ public class BFSKDemodulator
             double e0 = EnergyIQ(symbol, samplesPerSymbol, FreqBit0);
             double e1 = EnergyIQ(symbol, samplesPerSymbol, FreqBit1);
 
-            bits.Append(e1 > e0 ? '1' : '0');
+            newBits.Append(e1 > e0 ? '1' : '0');
 
             sampleBuffer.RemoveRange(0, samplesPerSymbol);
         }
 
-        return bits.ToString();
+        return newBits.ToString();
     }
     //public string ProcessAudio(byte[] buffer, int bytesRecorded)
     //{

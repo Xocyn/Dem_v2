@@ -13,87 +13,131 @@ namespace Dem_v2
 {
     internal class Program
     {
+        enum Estado
+        {
+            EsperandoInicio,
+            Grabando,
+            Cooldown
+        }
 
         static void Main(string[] args)
         {
-        Console.WriteLine("Dispositivos de entrada disponibles:\n");
+            Console.WriteLine("Dispositivos de entrada disponibles:\n");
 
-        for (int i = 0; i < WaveInEvent.DeviceCount; i++)
-        {
-            var caps = WaveInEvent.GetCapabilities(i);
-            Console.WriteLine($"{i}: {caps.ProductName}");
-        }
-
-        Console.WriteLine("\nSeleccione el numero del dispositivo:");
-        int device = int.Parse(Console.ReadLine());
-
-        WaveInEvent waveIn = new WaveInEvent();
-        waveIn.DeviceNumber = device;
-        waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
-
-        BFSKDemodulator demod = new BFSKDemodulator();
-
-        StringBuilder syncBuffer = new StringBuilder();
-        string syncPattern = "01010101010101010101010101";
-
-        bool grabando = false;
-
-        WaveFileWriter writer = null;
-
-        waveIn.DataAvailable += (s, a) =>
-        {
-            string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
-
-            foreach (char bit in bits)
+            for (int i = 0; i < WaveInEvent.DeviceCount; i++)
             {
-                if (!grabando)
+                var caps = WaveInEvent.GetCapabilities(i);
+                Console.WriteLine($"{i}: {caps.ProductName}");
+            }
+
+            Console.WriteLine("\nSeleccione el numero del dispositivo:");
+            int device = int.Parse(Console.ReadLine());
+
+            WaveInEvent waveIn = new WaveInEvent();
+            waveIn.DeviceNumber = device;
+            waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
+
+            BFSKDemodulator demod = new BFSKDemodulator();
+
+            StringBuilder syncBuffer = new StringBuilder();
+
+            string startPattern = "01010101010101010101010101";
+            string endPattern = "11111110001111111000";
+
+            int maxLen = Math.Max(startPattern.Length, endPattern.Length);
+
+            Estado estado = Estado.EsperandoInicio;
+
+            int cooldownMs = 2000;
+            DateTime cooldownHasta = DateTime.MinValue;
+
+            WaveFileWriter writer = null;
+
+            waveIn.DataAvailable += (s, a) =>
+            {
+                if (estado == Estado.Cooldown)
+                {
+                    if (DateTime.Now > cooldownHasta)
+                    {
+                        Console.WriteLine("Cooldown terminado");
+                        estado = Estado.EsperandoInicio;
+                        syncBuffer.Clear();
+                    }
+
+                    return;
+                }
+
+                string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
+
+                foreach (char bit in bits)
                 {
                     syncBuffer.Append(bit);
 
-                    if (syncBuffer.Length > syncPattern.Length)
+                    if (syncBuffer.Length > maxLen)
                         syncBuffer.Remove(0, 1);
 
-                    if (syncBuffer.ToString() == syncPattern)
+                    if (estado == Estado.EsperandoInicio)
                     {
-                        Console.WriteLine("DOT PATTERN DETECTADO");
+                        if (syncBuffer.ToString().EndsWith(startPattern))
+                        {
+                            Console.WriteLine("DOT PATTERN DETECTADO");
 
-                        grabando = true;
+                            estado = Estado.Grabando;
 
-                        string fileName = "debug_audio.wav";
+                            syncBuffer.Clear();
 
-                        writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
+                            string fileName = "debug_audio.wav";
 
-                        Console.WriteLine($"Grabando audio en {fileName}");
+                            writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
+
+                            Console.WriteLine($"Grabando audio en {fileName}");
+                        }
+                    }
+                    else if (estado == Estado.Grabando)
+                    {
+                        if (syncBuffer.ToString().EndsWith(endPattern))
+                        {
+                            Console.WriteLine("PATRON FIN DETECTADO");
+
+                            writer?.Dispose();
+                            writer = null;
+
+                            Console.WriteLine("Archivo WAV guardado.");
+
+                            estado = Estado.Cooldown;
+
+                            cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
+
+                            syncBuffer.Clear();
+                        }
                     }
                 }
-            }
 
-            if (grabando && writer != null)
+                if (estado == Estado.Grabando && writer != null)
+                {
+                    writer.Write(a.Buffer, 0, a.BytesRecorded);
+                }
+            };
+
+            waveIn.RecordingStopped += (s, a) =>
             {
-                writer.Write(a.Buffer, 0, a.BytesRecorded);
-            }
-        };
+                writer?.Dispose();
+                Console.WriteLine("Grabación detenida");
+            };
 
-        waveIn.RecordingStopped += (s, a) =>
-        {
-            writer?.Dispose();
-            Console.WriteLine("Archivo WAV guardado.");
-            Console.WriteLine("Grabación detenida");
-        };
+            Console.WriteLine("\nEscuchando micrófono...");
+            Console.WriteLine("Presione ENTER para detener el programa.\n");
 
-        Console.WriteLine("\nEscuchando micrófono...");
-        Console.WriteLine("Presione ENTER para detener la grabación.\n");
+            waveIn.StartRecording();
 
-        waveIn.StartRecording();
+            Console.ReadLine();
 
-        Console.ReadLine();
+            waveIn.StopRecording();
 
-        waveIn.StopRecording();
-
-        ProcesarBits();
+            ProcesarBits();
         }
 
-    public static void ProcesarBits()
+        public static void ProcesarBits()
 
         {
             string pathx = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_audio.wav");
