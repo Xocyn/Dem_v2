@@ -41,7 +41,7 @@ namespace Dem_v2
 
             StringBuilder syncBuffer = new StringBuilder();
 
-            string startPattern = "01010101010101010101010101";
+            string startPattern = "0101010101";
             string endPattern = "11111110001111111000";
 
             int maxLen = Math.Max(startPattern.Length, endPattern.Length);
@@ -61,6 +61,8 @@ namespace Dem_v2
                     {
                         Console.WriteLine("Cooldown terminado");
                         estado = Estado.EsperandoInicio;
+                        ProcesarBits();
+
                         syncBuffer.Clear();
                     }
 
@@ -134,7 +136,7 @@ namespace Dem_v2
 
             waveIn.StopRecording();
 
-            ProcesarBits();
+            
         }
 
         public static void ProcesarBits()
