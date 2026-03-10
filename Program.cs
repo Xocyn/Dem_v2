@@ -41,10 +41,12 @@ namespace Dem_v2
 
             StringBuilder syncBuffer = new StringBuilder();
 
+            StringBuilder endbuffer = new StringBuilder();
+
             string startPattern = "0101010101";
             string endPattern = "11111110001111111000";
 
-            int maxLen = Math.Max(startPattern.Length, endPattern.Length);
+            //int maxLen = Math.Max(startPattern.Length, endPattern.Length);
 
             Estado estado = Estado.EsperandoInicio;
 
@@ -52,6 +54,9 @@ namespace Dem_v2
             DateTime cooldownHasta = DateTime.MinValue;
 
             WaveFileWriter writer = null;
+
+            DateTime inicioGrabacion = DateTime.MinValue;
+            int maxGrabacionSeg = 10;
 
             waveIn.DataAvailable += (s, a) =>
             {
@@ -74,9 +79,13 @@ namespace Dem_v2
                 foreach (char bit in bits)
                 {
                     syncBuffer.Append(bit);
+                    endbuffer.Append(bit);
 
-                    if (syncBuffer.Length > maxLen)
+                    if (syncBuffer.Length > startPattern.Length)
                         syncBuffer.Remove(0, 1);
+
+                    if (endbuffer.Length > endPattern.Length)
+                        endbuffer.Remove(0, 1);
 
                     if (estado == Estado.EsperandoInicio)
                     {
@@ -84,7 +93,11 @@ namespace Dem_v2
                         {
                             Console.WriteLine("DOT PATTERN DETECTADO");
 
+                            // aca deberia agregar un IF en el que sino detecto 125 111 125 etc no empiezo a grabar, para evitar falsos positivos (AGREGAR)
+
                             estado = Estado.Grabando;
+
+                            inicioGrabacion = DateTime.Now;
 
                             syncBuffer.Clear();
 
@@ -97,7 +110,22 @@ namespace Dem_v2
                     }
                     else if (estado == Estado.Grabando)
                     {
-                        if (syncBuffer.ToString().EndsWith(endPattern))
+                        if ((DateTime.Now - inicioGrabacion).TotalSeconds > maxGrabacionSeg)
+                        {
+                            Console.WriteLine("Timeout de grabación alcanzado");
+
+                            writer?.Dispose();
+                            writer = null;
+
+                            estado = Estado.Cooldown;
+
+                            cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
+
+                            syncBuffer.Clear();
+
+                            return;
+                        }
+                        if (endbuffer.ToString().EndsWith(endPattern)) 
                         {
                             Console.WriteLine("PATRON FIN DETECTADO");
 
