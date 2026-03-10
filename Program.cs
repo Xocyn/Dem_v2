@@ -17,7 +17,8 @@ namespace Dem_v2
         {
             EsperandoInicio,
             Grabando,
-            Cooldown
+            Cooldown,
+            ValidandoCaracter
         }
 
         static void Main(string[] args)
@@ -40,13 +41,12 @@ namespace Dem_v2
             BFSKDemodulator demod = new BFSKDemodulator();
 
             StringBuilder syncBuffer = new StringBuilder();
-
             StringBuilder endbuffer = new StringBuilder();
+            StringBuilder decodeBuffer = new StringBuilder();
+            Random rnd = new Random();
 
             string startPattern = "0101010101";
             string endPattern = "11111110001111111000";
-
-            //int maxLen = Math.Max(startPattern.Length, endPattern.Length);
 
             Estado estado = Estado.EsperandoInicio;
 
@@ -58,6 +58,9 @@ namespace Dem_v2
             DateTime inicioGrabacion = DateTime.MinValue;
             int maxGrabacionSeg = 10;
 
+            int bitsValidacion = 0;
+            int maxBitsValidacion = 200;
+
             waveIn.DataAvailable += (s, a) =>
             {
                 if (estado == Estado.Cooldown)
@@ -65,10 +68,13 @@ namespace Dem_v2
                     if (DateTime.Now > cooldownHasta)
                     {
                         Console.WriteLine("Cooldown terminado");
+
                         estado = Estado.EsperandoInicio;
+
                         ProcesarBits();
 
                         syncBuffer.Clear();
+                        endbuffer.Clear();
                     }
 
                     return;
@@ -87,27 +93,89 @@ namespace Dem_v2
                     if (endbuffer.Length > endPattern.Length)
                         endbuffer.Remove(0, 1);
 
+                    //----------------------------------------
+                    // ESTADO 1: ESPERANDO INICIO
+                    //----------------------------------------
+
                     if (estado == Estado.EsperandoInicio)
                     {
                         if (syncBuffer.ToString().EndsWith(startPattern))
                         {
                             Console.WriteLine("DOT PATTERN DETECTADO");
 
-                            // aca deberia agregar un IF en el que sino detecto 125 111 125 etc no empiezo a grabar, para evitar falsos positivos (AGREGAR)
+                            estado = Estado.ValidandoCaracter; // modificado
 
-                            estado = Estado.Grabando;
+                            //inicioGrabacion = DateTime.Now;
 
-                            inicioGrabacion = DateTime.Now;
+                            //syncBuffer.Clear();
 
-                            syncBuffer.Clear();
+                            //string fileName = "debug_audio.wav";
 
-                            string fileName = "debug_audio.wav";
+                            //writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
 
-                            writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
+                            //Console.WriteLine($"Grabando audio en {fileName}");
 
-                            Console.WriteLine($"Grabando audio en {fileName}");
+
+                            decodeBuffer.Clear();
+                            bitsValidacion = 0;
                         }
                     }
+
+                    //----------------------------------------
+                    // ESTADO 2: VALIDANDO CARACTER
+                    //----------------------------------------
+
+                    else if (estado == Estado.ValidandoCaracter)
+                    {
+                        decodeBuffer.Append(bit);
+                        bitsValidacion++;
+
+                        if (decodeBuffer.Length == 10)
+                        {
+                            if (Decodificador.TryDeco(decodeBuffer.ToString(), out int valor))
+                            {
+                                if (PhasingSequence.TryCaracter(valor))
+                                {
+                                    Console.WriteLine($"Caracter valido detectado: {valor}");
+
+                                    estado = Estado.Grabando;
+
+                                    inicioGrabacion = DateTime.Now;
+
+                                    syncBuffer.Clear();
+
+                                    string fileName = "debug_audio.wav";
+
+                                    writer = new WaveFileWriter(fileName, waveIn.WaveFormat);
+
+                                    Console.WriteLine($"Grabando audio en {fileName}");
+
+                                    decodeBuffer.Clear();
+                                    bitsValidacion = 0;
+
+                                    continue;
+                                }
+
+                            }
+
+                            decodeBuffer.Remove(0, 1);
+                        }
+
+                        if (bitsValidacion > maxBitsValidacion)
+                        {
+                            Console.WriteLine("Validacion fallida, volviendo a espera");
+
+                            estado = Estado.EsperandoInicio;
+
+                            decodeBuffer.Clear();
+                            bitsValidacion = 0;
+                        }
+                    }
+
+                    //----------------------------------------
+                    // ESTADO 3: GRABANDO
+                    //----------------------------------------
+
                     else if (estado == Estado.Grabando)
                     {
                         if ((DateTime.Now - inicioGrabacion).TotalSeconds > maxGrabacionSeg)
@@ -123,9 +191,10 @@ namespace Dem_v2
 
                             syncBuffer.Clear();
 
-                            return;
+                            break;
                         }
-                        if (endbuffer.ToString().EndsWith(endPattern)) 
+
+                        if (endbuffer.ToString().EndsWith(endPattern))
                         {
                             Console.WriteLine("PATRON FIN DETECTADO");
 
@@ -142,6 +211,10 @@ namespace Dem_v2
                         }
                     }
                 }
+
+                //----------------------------------------
+                // ESCRITURA DE AUDIO
+                //----------------------------------------
 
                 if (estado == Estado.Grabando && writer != null)
                 {
@@ -163,8 +236,6 @@ namespace Dem_v2
             Console.ReadLine();
 
             waveIn.StopRecording();
-
-            
         }
 
         public static void ProcesarBits()
@@ -225,6 +296,7 @@ namespace Dem_v2
             if (encontrados.Count == 0)
             {
                 Console.WriteLine("No se detectaron mensajes válidos en la secuencia.");
+                return;
             }
             else
             {
