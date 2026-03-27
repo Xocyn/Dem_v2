@@ -18,8 +18,8 @@ namespace Dem_v2
             // 2. Contar ceros en los 7 bits de datos y reconstruir carácter
             for (int i = 0; i < 7; i++)
             {
-               int bit = (datos >> i) & 1;   // lee LSB → MSB
-               valor |= bit << (6 - i);      // asigna peso invertido
+                int bit = (datos >> i) & 1;   // lee LSB → MSB
+                valor |= bit << (6 - i);      // asigna peso invertido
                 if (((datos >> i) & 1) == 0)
                     ceros++;
             }
@@ -99,12 +99,18 @@ namespace Dem_v2
         }
 
         public static bool DxRx(string input, int i) // verificia si Dx y Rx son iguales
-        { 
+        {
+            if (i + 10 > input.Length || i + 60 > input.Length)
+            {
+                Console.WriteLine("DxRx: stream demasiado corto para verificar.");
+                return false;
+            }
+
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             TryDecodificarMensaje(mensajeInt, out int valor);
 
-            string ventana2 = input.Substring(i+50, 10);
+            string ventana2 = input.Substring(i + 50, 10);
             int mensajeInt2 = Convert.ToInt32(ventana2, 2);
             TryDecodificarMensaje(mensajeInt2, out int valor2);
 
@@ -113,32 +119,36 @@ namespace Dem_v2
                 //Console.WriteLine("Dx y Rx son iguales");
                 return true;
             }
-            else 
+            else
             {
                 //Console.WriteLine("Dx y Rx NO son iguales");
                 return false;
             }
         }
 
-        public static void checkecc(int i, string input, List<int> ECC)
+        public static bool checkecc(int i, string input, List<int> ECC)
         {
-            // 1️ Sumar todos los elementos
             int sum = ECC.Sum();
-
-            // 2️ Aplicar máscara de 7 bits (0x7F = 127 = 01111111)
             int ecc = sum & 0x7F;
 
-            int valor;
+            if (i + 30 > input.Length)
+            {
+                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                return false;
+            }
+
             string ventana = input.Substring(i + 20, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
-            Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
+            Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
             if (ecc == valor)
             {
                 Console.WriteLine("ECC correcto");
+                return true;
             }
             else
             {
-                Console.WriteLine("Error en ECC: valor calculado = " + ecc + ", valor recibido = " + valor);
+                Console.WriteLine("Error en ECC: calculado=" + ecc + " recibido=" + valor);
+                return false;
             }
         }
 

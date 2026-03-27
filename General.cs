@@ -14,7 +14,7 @@ namespace Dem_v2
             string ventana = input.Substring(i + 20, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-            
+
             if (form == valor) // es el primer format recibido
             {
                 // decodifico el categoria en base a esta posicion
@@ -300,7 +300,7 @@ namespace Dem_v2
                         break;
                 }
             }
-            else if (h == 2) 
+            else if (h == 2)
             {
                 switch (freq_canal_digitos[0])
                 {

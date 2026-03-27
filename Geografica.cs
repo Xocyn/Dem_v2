@@ -135,7 +135,7 @@ namespace Dem_v2
             }
 
             Console.WriteLine($"Hora UTC: {string.Join(" | ", UTC)}");
-            j= i + 40;
+            j = i + 40;
 
             return j;
         }
