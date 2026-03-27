@@ -147,7 +147,7 @@ namespace Dem_v2
                         Console.WriteLine("Peligro de zozobra");
                         break;
                     case 105: 
-                        Console.WriteLine("Hundimiento");  
+                        Console.WriteLine("Naufragio");  
                         break;
                     case 106: 
                         Console.WriteLine("Deshabilitado y a la deriva");

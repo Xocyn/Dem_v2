@@ -34,19 +34,30 @@ namespace Dem_v2
             Console.WriteLine("\nSeleccione el numero del dispositivo:");
             int device = int.Parse(Console.ReadLine());
 
+            Console.WriteLine("\nSeleccione el modo de demodulacion:");
+            Console.WriteLine("0: HF  (100 bps  - 1615/1785 Hz)");
+            Console.WriteLine("1: VHF (1200 bps - 1300/2100 Hz)");
+            Console.Write("Modo: ");
+            bool vhfMode = Console.ReadLine()?.Trim() == "1";
+            Console.WriteLine(vhfMode ? "Modo VHF seleccionado." : "Modo HF seleccionado.");
+
             WaveInEvent waveIn = new WaveInEvent();
             waveIn.DeviceNumber = device;
             waveIn.WaveFormat = new WaveFormat(44100, 16, 1);
 
-            BFSKDemodulator demod = new BFSKDemodulator();
+            BFSKDemodulator demod = new BFSKDemodulator(vhfMode);
 
             StringBuilder syncBuffer = new StringBuilder();
-            StringBuilder endbuffer = new StringBuilder();
             StringBuilder decodeBuffer = new StringBuilder();
             Random rnd = new Random();
 
             string startPattern = "0101010101";
-            string endPattern = "11111110001111111000";
+
+            // eosCount: contador de EOS (127) consecutivos decodificados con paridad OK.
+            // Reemplaza la detección cruda de endbuffer: en VHF (1.1-1.8 ciclos/símbolo)
+            // errores de timing generan bits erróneos que pueden formar el endPattern
+            // de 20 bits por accidente. La paridad de 3 bits de cada símbolo lo filtra.
+            int eosCount = 0;
 
             Estado estado = Estado.EsperandoInicio;
 
@@ -71,27 +82,22 @@ namespace Dem_v2
 
                         estado = Estado.EsperandoInicio;
 
-                        ProcesarBits();
+                        ProcesarBits(vhfMode);
 
                         syncBuffer.Clear();
-                        endbuffer.Clear();
                     }
 
                     return;
                 }
 
-                string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded);
+                string bits = demod.ProcessAudio(a.Buffer, a.BytesRecorded); // esto algun dia puede llegar a saturar ??? deberia limpiarse cada cierto tiempo
 
                 foreach (char bit in bits)
                 {
                     syncBuffer.Append(bit);
-                    endbuffer.Append(bit);
 
                     if (syncBuffer.Length > startPattern.Length)
                         syncBuffer.Remove(0, 1);
-
-                    if (endbuffer.Length > endPattern.Length)
-                        endbuffer.Remove(0, 1);
 
                     //----------------------------------------
                     // ESTADO 1: ESPERANDO INICIO
@@ -190,24 +196,52 @@ namespace Dem_v2
                             cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
 
                             syncBuffer.Clear();
+                            decodeBuffer.Clear();
+                            eosCount = 0;
 
                             break;
                         }
 
-                        if (endbuffer.ToString().EndsWith(endPattern))
+                        // Detección de fin a nivel de SÍMBOLO (no de bits crudos).
+                        // Al entrar en Grabando el boundary de símbolo ya está alineado.
+                        // Se acumulan bits de a 10 y se verifica la paridad antes de
+                        // evaluar el valor. Así un error de bit aislado no genera
+                        // un falso EOS — necesitaría corromper el símbolo entero.
+                        decodeBuffer.Append(bit);
+
+                        if (decodeBuffer.Length == 10)
                         {
-                            Console.WriteLine("PATRON FIN DETECTADO");
+                            if (Decodificador.TryDeco(decodeBuffer.ToString(), out int simVal))
+                            {
+                                if (simVal == 127)
+                                {
+                                    eosCount++;
+                                    if (eosCount >= 2)
+                                    {
+                                        Console.WriteLine("FIN DE TRAMA detectado (2x EOS con paridad OK)");
 
-                            writer?.Dispose();
-                            writer = null;
+                                        writer?.Dispose();
+                                        writer = null;
 
-                            Console.WriteLine("Archivo WAV guardado.");
+                                        Console.WriteLine("Archivo WAV guardado.");
 
-                            estado = Estado.Cooldown;
+                                        estado = Estado.Cooldown;
 
-                            cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
+                                        cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
 
-                            syncBuffer.Clear();
+                                        syncBuffer.Clear();
+                                        decodeBuffer.Clear();
+                                        eosCount = 0;
+                                    }
+                                }
+                                else
+                                {
+                                    // Símbolo válido pero no es EOS: resetear contador
+                                    eosCount = 0;
+                                }
+                            }
+                            // Paridad incorrecta: símbolo corrupto, no resetear eosCount
+                            decodeBuffer.Clear();
                         }
                     }
                 }
@@ -238,11 +272,11 @@ namespace Dem_v2
             waveIn.StopRecording();
         }
 
-        public static void ProcesarBits()
+        public static void ProcesarBits(bool vhf = false)
 
         {
             string pathx = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_audio.wav");
-            string input = BFSKDemodulator.DemodulateToString(pathx);
+            string input = BFSKDemodulator.DemodulateToString(pathx, vhf);
 
             List<(int Index, int Value)> encontrados = new List<(int, int)>();
             int i = 0;
@@ -256,39 +290,46 @@ namespace Dem_v2
 
             while (!sincronizado)
             {
-                string ventana = input.Substring(i, 10);
-                int mensajeInt = Convert.ToInt32(ventana, 2);
-
-                if (Decodificador.TryDecodificarMensaje(mensajeInt, out int valor))
+                if (i + 10 <= input.Length)
                 {
-                    // mensaje de 10 bits válido según el control
-                    if (PhasingSequence.TryCaracter(valor))
-                    {
-                        // Es un carácter válido de phasing: registrar y consumir los 10 bits
-                        encontrados.Add((i, valor));
-                        i += 10;
+                    string ventana = input.Substring(i, 10);
+                    int mensajeInt = Convert.ToInt32(ventana, 2);
 
-                        const int ventanaDetect = 3;
-                        if (encontrados.Count >= ventanaDetect)
+                    if (Decodificador.TryDecodificarMensaje(mensajeInt, out int valor))
+                    {
+                        // mensaje de 10 bits válido según el control
+                        if (PhasingSequence.TryCaracter(valor))
                         {
-                            if (PhasingSequence.TryDetect(encontrados, out var pattern))
+                            // Es un carácter válido de phasing: registrar y consumir los 10 bits
+                            encontrados.Add((i, valor));
+                            i += 10;
+
+                            const int ventanaDetect = 3;
+                            if (encontrados.Count >= ventanaDetect)
                             {
-                                Console.WriteLine($"Patrón de phasing detectado: {pattern}");
-                                sincronizado = true;
+                                if (PhasingSequence.TryDetect(encontrados, out var pattern))
+                                {
+                                    Console.WriteLine($"Patrón de phasing detectado: {pattern}");
+                                    sincronizado = true;
+                                }
                             }
                         }
+                        else
+                        {
+                            // Decodificable pero no es el carácter esperado: desplazar 1 bit
+                            i += 1;
+                        }
+
                     }
                     else
                     {
-                        // Decodificable pero no es el carácter esperado: desplazar 1 bit
+                        // No decodificable: desplazar 1 bit
                         i += 1;
                     }
-
                 }
                 else
                 {
-                    // No decodificable: desplazar 1 bit
-                    i += 1;
+                    break; // o manejar el caso donde no hay suficientes caracteres
                 }
             }
 
@@ -318,19 +359,25 @@ namespace Dem_v2
 
             while (sincronizado && !formatconfirmed)
             {
-                string ventana = input.Substring(i, 10);
-                int mensajeInt = Convert.ToInt32(ventana, 2);
-                Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                form = FormatSpecifier.Filtro(valor, out int j); // por ahora el filtrado tambien haria trabajo de format
-                dxrxconfirmed = Decodificador.DxRx(input, i); // verifica si son iguales los DX y RX
-                                                              // el problema surge sino necesito confirmarlos (solo caso socorro y allships)
-                i = i + 10;
-                if (j == 1 && dxrxconfirmed)
+                if (i + 10 <= input.Length)
                 {
-                    formatconfirmed = true;
-                    Console.WriteLine($"Format specifier confirmado: {form}");
+                    string ventana = input.Substring(i, 10);
+                    int mensajeInt = Convert.ToInt32(ventana, 2);
+                    Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                    form = FormatSpecifier.Filtro(valor, out int j); // por ahora el filtrado tambien haria trabajo de format
+                    dxrxconfirmed = Decodificador.DxRx(input, i); // verifica si son iguales los DX y RX
+                                                                  // el problema surge sino necesito confirmarlos (solo caso socorro y allships)
+                    i = i + 10;
+                    if (j == 1 && dxrxconfirmed)
+                    {
+                        formatconfirmed = true;
+                        Console.WriteLine($"Format specifier confirmado: {form}");
+                    }
                 }
-
+                else
+                {
+                    break;
+                }
             }
 
             i = i - 10;  // retrocedo 10 para que el switch tome el format specifier correcto
