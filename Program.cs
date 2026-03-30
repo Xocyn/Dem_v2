@@ -79,12 +79,12 @@ namespace Dem_v2
 
 
             DateTime inicioGrabacion = DateTime.MinValue;
-            // VHF: mensaje dura ~0.45s → timeout 2s
-            // HF:  mensaje dura ~5.4s → timeout 15s
-            int maxGrabacionSeg = vhfMode ? 2 : 15;
+            // VHF: mensaje dura ~0.45s → timeout 1s
+            // HF:  mensaje dura ~5.4s → timeout 10s
+            int maxGrabacionSeg = vhfMode ? 1 : 10;
 
             int bitsValidacion = 0;
-            int maxBitsValidacion = 200;
+            int maxBitsValidacion = 50; // 200 inicialmente
             StringBuilder bitAccumulator = new StringBuilder();
 
             waveIn.DataAvailable += (s, a) =>
@@ -129,8 +129,10 @@ namespace Dem_v2
                                 if (syncBuffers[ph].Length > startPattern.Length)
                                     syncBuffers[ph].Remove(0, 1);
 
+
                                 if (syncBuffers[ph].ToString().EndsWith(startPattern))
                                 {
+                                    Console.Clear();
                                     Console.WriteLine($"DOT PATTERN DETECTADO (fase {ph})");
                                     lockedPhase = ph;
                                     demod.LockPhase(ph);
@@ -143,11 +145,31 @@ namespace Dem_v2
                                     // NO hacer break: seguimos procesando bits restantes
                                     // del chunk en estado ValidandoCaracter
                                 }
+                                // Lógica alternativa: detectar valor 125 sin DOT PATTERN
+                                else if (syncBuffers[ph].Length >= 10)
+                                {
+                                    string substring = syncBuffers[ph].ToString().Substring(0, 10);
+                                    if (Decodificador.TryDeco(substring, out int valor) && valor == 125)
+                                    {
+                                        Console.Clear();
+                                        Console.WriteLine($"Valor 125 detectado sin DOT PATTERN (fase {ph})");
+                                        lockedPhase = ph;
+                                        demod.LockPhase(ph);
+                                        estado = Estado.ValidandoCaracter;
+                                        decodeBuffer.Clear();
+                                        bitsValidacion = 0;
+                                        phasingConsecutivos = 0;
+                                        phasingStartOffset = 0;
+                                        bitAccumulator.Clear();
+                                    }
+                                }
                             }
 
                             //----------------------------------------
                             // ESTADO 2: VALIDANDO CARACTER
                             //----------------------------------------
+
+                            // FALTA UNA CONDICION PARA SALIR DE ESTE ESTADO: si pasan N bits sin detectar un caracter de phasing válido, volver a EsperandoInicio.
                             else if (estado == Estado.ValidandoCaracter)
                             {
                                 bitAccumulator.Append(bit);
@@ -168,7 +190,7 @@ namespace Dem_v2
 
                                         if (phasingConsecutivos >= 3)
                                         {
-                                            Console.WriteLine("Phasing confirmado (3 chars). Grabando...");
+                                            Console.WriteLine("Phasing confirmado. Grabando...");
                                             estado = Estado.Grabando;
                                             inicioGrabacion = DateTime.Now;
                                             eosCount = 0;
@@ -219,12 +241,14 @@ namespace Dem_v2
                                 {
                                     if (Decodificador.TryDeco(decodeBuffer.ToString(), out int simVal))
                                     {
+                                        // solo valido si 127
+                                        // AGREGAR: que lea ECC
                                         if (simVal == 127)
                                         {
                                             eosCount++;
                                             if (eosCount >= 2)
                                             {
-                                                Console.WriteLine("FIN DE TRAMA (2x EOS con paridad OK)");
+                                                Console.WriteLine("FIN DE TRAMA");
                                                 estado = Estado.Cooldown;
                                                 cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
                                                 string capturedBits = bitAccumulator.ToString(
@@ -322,68 +346,68 @@ namespace Dem_v2
 
             // AGREGAR: si el mensaje no se sincroniza en N bits, DESCARTAR MENSAJE
 
-            bool sincronizado = false; // usado en la phasing sequence
+            bool sincronizado = true; // usado en la phasing sequence
 
-            while (!sincronizado)
-            {
-                if (i + 10 <= input.Length)
-                {
-                    string ventana = input.Substring(i, 10);
-                    int mensajeInt = Convert.ToInt32(ventana, 2);
+            //while (!sincronizado)
+            //{
+            //    if (i + 10 <= input.Length)
+            //    {
+            //        string ventana = input.Substring(i, 10);
+            //        int mensajeInt = Convert.ToInt32(ventana, 2);
 
-                    if (Decodificador.TryDecodificarMensaje(mensajeInt, out int valor))
-                    {
-                        // mensaje de 10 bits válido según el control
-                        if (PhasingSequence.TryCaracter(valor))
-                        {
-                            // Es un carácter válido de phasing: registrar y consumir los 10 bits
-                            encontrados.Add((i, valor));
-                            i += 10;
+            //        if (Decodificador.TryDecodificarMensaje(mensajeInt, out int valor))
+            //        {
+            //            // mensaje de 10 bits válido según el control
+            //            if (PhasingSequence.TryCaracter(valor))
+            //            {
+            //                // Es un carácter válido de phasing: registrar y consumir los 10 bits
+            //                encontrados.Add((i, valor));
+            //                i += 10;
 
-                            const int ventanaDetect = 3;
-                            if (encontrados.Count >= ventanaDetect)
-                            {
-                                if (PhasingSequence.TryDetect(encontrados, out var pattern))
-                                {
-                                    Console.WriteLine($"Patrón de phasing detectado: {pattern}");
-                                    sincronizado = true;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Decodificable pero no es el carácter esperado: desplazar 1 bit
-                            i += 1;
-                        }
+            //                const int ventanaDetect = 3;
+            //                if (encontrados.Count >= ventanaDetect)
+            //                {
+            //                    if (PhasingSequence.TryDetect(encontrados, out var pattern))
+            //                    {
+            //                        Console.WriteLine($"Patrón de phasing detectado: {pattern}");
+            //                        sincronizado = true;
+            //                    }
+            //                }
+            //            }
+            //            else
+            //            {
+            //                // Decodificable pero no es el carácter esperado: desplazar 1 bit
+            //                i += 1;
+            //            }
 
-                    }
-                    else
-                    {
-                        // No decodificable: desplazar 1 bit
-                        i += 1;
-                    }
-                }
-                else
-                {
-                    break; // o manejar el caso donde no hay suficientes caracteres
-                }
-            }
+            //        }
+            //        else
+            //        {
+            //            // No decodificable: desplazar 1 bit
+            //            i += 1;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        break; // o manejar el caso donde no hay suficientes caracteres
+            //    }
+            //}
 
 
-            if (encontrados.Count == 0)
-            {
-                Console.WriteLine("No se detectaron mensajes válidos en la secuencia.");
-                return false;
-            }
-            else
-            {
-                Console.WriteLine($"Phasing sequence encontrada:");
-                foreach (var e in encontrados)
-                {
-                    //string printable = (e.Value >= 32 && e.Value <= 126) ? ((char)e.Value).ToString() : ".";
-                    Console.WriteLine($"- Offset {e.Index}: valor numérico = {e.Value}");
-                }
-            }
+            //if (encontrados.Count == 0)
+            //{
+            //    Console.WriteLine("No se detectaron mensajes válidos en la secuencia.");
+            //    return false;
+            //}
+            //else
+            //{
+            //    Console.WriteLine($"Phasing sequence encontrada:");
+            //    foreach (var e in encontrados)
+            //    {
+            //        //string printable = (e.Value >= 32 && e.Value <= 126) ? ((char)e.Value).ToString() : ".";
+            //        Console.WriteLine($"- Offset {e.Index}: valor numérico = {e.Value}");
+            //    }
+            //}
 
             bool formatconfirmed = false;
             bool dxrxconfirmed = false;
@@ -449,14 +473,14 @@ namespace Dem_v2
                     }
                     i = Socorro.FirstTelecommand(i, input, ECC);
 
-                    //for (int k = 0; i+k < input.Length; k += 10)
-                    //{
-                    //    int valor;
-                    //    string ventana = input.Substring(i + k, 10);
-                    //    int mensajeInt = Convert.ToInt32(ventana, 2);
-                    //    Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
-                    //    Console.WriteLine($"{valor}");
-                    //}
+                    for (int k = 0; k < input.Length; k += 10)
+                    {
+                        int valor;
+                        string ventana = input.Substring(k, 10);
+                        int mensajeInt = Convert.ToInt32(ventana, 2);
+                        Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
+                        Console.Write($"{valor} ");
+                    }
 
                     if (i + 10 > input.Length)
                     {
@@ -471,7 +495,7 @@ namespace Dem_v2
                     {
                         Console.WriteLine("EOS detectado");
                         if (i + 30 <= input.Length)
-                            Decodificador.checkecc(i, input, ECC);
+                            Decodificador.Mod2Sum7Bits(i, input, ECC);
                         else
                             Console.WriteLine("Stream demasiado corto para leer ECC.");
                     }
@@ -528,7 +552,6 @@ namespace Dem_v2
                     return false;
             }
             return false;
-
 
         }
     }

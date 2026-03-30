@@ -152,5 +152,38 @@ namespace Dem_v2
             }
         }
 
+        public static bool Mod2Sum7Bits(int i, string input, List<int> ECC)
+        {                
+            int result = 0;
+
+            foreach (int v in ECC)
+            {
+                result ^= v; // XOR acumulativo (suma módulo 2)
+            }
+
+            // Nos quedamos con los 7 bits menos significativos
+            result &= 0x7F;
+
+            if (i + 30 > input.Length)
+            {
+                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                return false;
+            }
+
+            string ventana = input.Substring(i + 20, 10);
+            int mensajeInt = Convert.ToInt32(ventana, 2);
+            Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+            if (result == valor)
+            {
+                Console.WriteLine("ECC correcto");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine("Error en ECC: calculado=" + result + " recibido=" + valor);
+                return false;
+            }
+        }
+
     }
 }

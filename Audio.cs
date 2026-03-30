@@ -186,8 +186,8 @@ public class BFSKDemodulator
         for (int n = 0; n < length; n++)
         {
             double t = (double)n / SampleRate;
-            I += s[start + n] * Math.Cos(2 * Math.PI * freq * t);
-            Q += s[start + n] * Math.Sin(2 * Math.PI * freq * t);
+            I += s[start + n] * Math.Cos(2 * Math.PI * freq * t); // FASE
+            Q += s[start + n] * Math.Sin(2 * Math.PI * freq * t); // CUADRATURA
         }
         return I * I + Q * Q;
     }

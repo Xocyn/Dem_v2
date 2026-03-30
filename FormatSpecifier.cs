@@ -15,7 +15,7 @@ namespace Dem_v2
             if (PhasingSequence.TryCaracter(f_msj))
             {
                 // descartar
-                Console.WriteLine("Valor descartado");
+                //Console.WriteLine("Valor descartado");
                 j = 0; // Mantener el While
                 return 0;
             }

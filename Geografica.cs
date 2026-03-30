@@ -52,11 +52,19 @@ namespace Dem_v2
             // AGREGAR: si no cumple con subtring's lanzar error o desconocido
 
             string todos = string.Concat(PuntoGeo.Select(n => n.ToString()));
-            string referencia = todos.Substring(0, 1); // posición 0
-            string lat_g = todos.Substring(1, 2); // posiciones 1-2
-            string lat_m = todos.Substring(3, 2); // posiciones 3-4
-            string long_g = todos.Substring(5, 3); // posiciones 5-7
-            string long_m = todos.Substring(8, 2); // posiciones 8-9
+
+            if (todos.Length < 10)
+            {
+                Console.WriteLine($"Ubicacion desconocida: {string.Join(" | ", fail)}");
+                valid = false;
+                return i + 100;
+            }
+
+            string referencia = todos.Substring(0, 1);
+            string lat_g = todos.Substring(1, 2);
+            string lat_m = todos.Substring(3, 2);
+            string long_g = todos.Substring(5, 3);
+            string long_m = todos.Substring(8, 2);
 
             switch (referencia)
             {
