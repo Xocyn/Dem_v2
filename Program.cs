@@ -142,7 +142,7 @@ namespace Dem_v2
                     {
                         if ((DateTime.Now - inicioGrabacion).TotalSeconds > maxGrabacionSeg)
                         {
-                            Console.WriteLine("Timeout de grabación. Procesando...");
+                            Console.WriteLine("Timeout de grabación");
                             FinalizarCaptura("TIMEOUT");
                         }
                     }
@@ -203,25 +203,43 @@ namespace Dem_v2
                                 bitAccumulator.Append(bit);
                                 decodeBuffer.Append(bit);
 
-                                // Detección de EOS (valor 127 con paridad correcta)
-                                if (decodeBuffer.Length == 10)
+                                // Detección de EOS (valor 127 con paridad correcta) - VENTANA DESLIZANTE
+                                // Verificar cada posible ventana de 10 bits dentro del decodeBuffer
+                                if (decodeBuffer.Length >= 10)
                                 {
-                                    if (Decodificador.TryDeco(decodeBuffer.ToString(), out int simVal) && simVal == 127)
+                                    // Recorrer el buffer con ventana deslizante
+                                    for (int w = 0; w <= decodeBuffer.Length - 10; w++)
                                     {
-                                        eosCount++;
-                                        if (eosCount >= 2)
+                                        string ventana = decodeBuffer.ToString(w, 10);
+                                        if (Decodificador.TryDeco(ventana, out int simVal) && simVal == 127)
                                         {
-                                            Console.WriteLine("EOS detectado. Finalizando captura inmediatamente...");
-                                            FinalizarCaptura("EOS");
-                                            debeFinalizarLoop = true;
-                                            break;
+                                            eosCount++;
+                                            Console.WriteLine($"[EOS detectado en posición {w}] Contador: {eosCount}");
+
+                                            if (eosCount >= 2)
+                                            {
+                                                Console.WriteLine("EOS detectado (2 secuencias). Finalizando captura...");
+                                                FinalizarCaptura("EOS");
+                                                debeFinalizarLoop = true;
+                                                break;
+                                            }
+
+                                            // Limpiar el buffer después de detectar el primer EOS
+                                            // para buscar el segundo EOS
+                                            if (eosCount == 1)
+                                            {
+                                                decodeBuffer.Clear();
+                                                w = -1; // Reiniciar el búsqueda en el buffer limpio
+                                            }
                                         }
                                     }
-                                    else
+
+                                    // Si no encontramos EOS y el buffer es muy largo, descartar el primer bit
+                                    // para no acumular indefinidamente
+                                    if (decodeBuffer.Length > 1000 && eosCount == 0)
                                     {
-                                        eosCount = 0;
+                                        decodeBuffer.Remove(0, 1);
                                     }
-                                    decodeBuffer.Clear();
                                 }
                             }
                         }
@@ -244,7 +262,7 @@ namespace Dem_v2
                     phasingStartOffset = 0;
                     decodeBuffer.Clear();
                     bitAccumulator.Clear();
-                    Console.WriteLine($"[IniciarGrabacion] Fase {ph} bloqueada. Comenzando grabación...");
+                    Console.WriteLine($"[IniciarGrabacion] Fase {ph} bloqueada.");
                 }
 
                 void FinalizarCaptura(string motivo)
