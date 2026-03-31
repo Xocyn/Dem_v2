@@ -203,40 +203,32 @@ namespace Dem_v2
                                 bitAccumulator.Append(bit);
                                 decodeBuffer.Append(bit);
 
-                                // Detección de EOS (valor 127 con paridad correcta) - VENTANA DESLIZANTE
-                                // Verificar cada posible ventana de 10 bits dentro del decodeBuffer
-                                if (decodeBuffer.Length >= 10)
+                                // Detección de EOS CONSECUTIVOS (dos valores 127 seguidos)
+                                // Buscar patrones de 20 bits que representen 127 + 127
+                                if (decodeBuffer.Length >= 20)
                                 {
-                                    // Recorrer el buffer con ventana deslizante
-                                    for (int w = 0; w <= decodeBuffer.Length - 10; w++)
+                                    // Recorrer el buffer con ventana de 20 bits
+                                    for (int w = 0; w <= decodeBuffer.Length - 20; w++)
                                     {
-                                        string ventana = decodeBuffer.ToString(w, 10);
-                                        if (Decodificador.TryDeco(ventana, out int simVal) && simVal == 127)
+                                        // Extraer dos ventanas consecutivas de 10 bits
+                                        string ventana1 = decodeBuffer.ToString(w, 10);
+                                        string ventana2 = decodeBuffer.ToString(w + 10, 10);
+
+                                        bool es127_1 = Decodificador.TryDeco(ventana1, out int val1) && val1 == 127;
+                                        bool es127_2 = Decodificador.TryDeco(ventana2, out int val2) && val2 == 127;
+
+                                        if (es127_1 && es127_2)
                                         {
-                                            eosCount++;
-                                            Console.WriteLine($"[EOS detectado en posición {w}] Contador: {eosCount}");
-
-                                            if (eosCount >= 2)
-                                            {
-                                                Console.WriteLine("EOS detectado (2 secuencias). Finalizando captura...");
-                                                FinalizarCaptura("EOS");
-                                                debeFinalizarLoop = true;
-                                                break;
-                                            }
-
-                                            // Limpiar el buffer después de detectar el primer EOS
-                                            // para buscar el segundo EOS
-                                            if (eosCount == 1)
-                                            {
-                                                decodeBuffer.Clear();
-                                                w = -1; // Reiniciar el búsqueda en el buffer limpio
-                                            }
+                                            Console.WriteLine($"EOS CONSECUTIVO detectado en posición {w}: 127 + 127");
+                                            FinalizarCaptura("EOS");
+                                            debeFinalizarLoop = true;
+                                            break;
                                         }
                                     }
 
                                     // Si no encontramos EOS y el buffer es muy largo, descartar el primer bit
                                     // para no acumular indefinidamente
-                                    if (decodeBuffer.Length > 1000 && eosCount == 0)
+                                    if (decodeBuffer.Length > 1000)
                                     {
                                         decodeBuffer.Remove(0, 1);
                                     }
@@ -278,7 +270,6 @@ namespace Dem_v2
                     if (capturado.Length > 0)
                     {
                         _mensajesCapturados.Enqueue(capturado);
-                        Console.WriteLine($"[Encolado] Mensaje con {capturado.Length} bits en cola de procesamiento");
                     }
                     else
                     {
