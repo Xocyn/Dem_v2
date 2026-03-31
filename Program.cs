@@ -169,7 +169,6 @@ namespace Dem_v2
                             // ESTADO 2: VALIDANDO CARACTER
                             //----------------------------------------
 
-                            // FALTA UNA CONDICION PARA SALIR DE ESTE ESTADO: si pasan N bits sin detectar un caracter de phasing válido, volver a EsperandoInicio.
                             else if (estado == Estado.ValidandoCaracter)
                             {
                                 bitAccumulator.Append(bit);
@@ -182,30 +181,32 @@ namespace Dem_v2
                                         && PhasingSequence.TryCaracter(valor))
                                     {
                                         if (phasingConsecutivos == 0)
+                                        {
                                             phasingStartOffset = bitAccumulator.Length - 10;
+                                            bitsValidacion = 0;  // RESETEA
+                                        }
                                         phasingConsecutivos++;
                                         Console.WriteLine($"Phasing char #{phasingConsecutivos}: {valor}");
                                         decodeBuffer.Clear();
-                                        bitsValidacion = 0;
 
                                         if (phasingConsecutivos >= 3)
                                         {
                                             Console.WriteLine("Phasing confirmado. Grabando...");
-                                            estado = Estado.Grabando;
                                             inicioGrabacion = DateTime.Now;
+                                            estado = Estado.Grabando;
                                             eosCount = 0;
                                             decodeBuffer.Clear();
-                                            Console.WriteLine("Acumulando bits del mensaje...");
                                         }
                                     }
                                     else
                                     {
-                                        // Paridad falla o no es phasing: desplazar 1 bit
+                                        // Falló: resetea contador si no hay progreso
                                         phasingConsecutivos = 0;
                                         decodeBuffer.Remove(0, 1);
                                     }
                                 }
 
+                                // Sale si pasan N bits sin detectar NINGÚN phasing
                                 if (bitsValidacion > maxBitsValidacion)
                                 {
                                     Console.WriteLine("Validacion fallida, volviendo a espera");
