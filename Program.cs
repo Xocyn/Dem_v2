@@ -409,7 +409,7 @@ namespace Dem_v2
                 if (j == 1 && dxrxConfirmed)
                 {
                     formatConfirmed = true;
-                    Console.WriteLine($"Format specifier confirmado: {form}");
+                    //Console.WriteLine($"Format specifier confirmado: {form}");
                 }
             }
 
@@ -442,15 +442,15 @@ namespace Dem_v2
                     }
                     i = Socorro.FirstTelecommand(i, input, ECC);
 
-                    // Dump de todos los valores decodificados (debug)
-                    for (int k = 0; k + 10 <= input.Length; k += 10)
-                    {
-                        string v = input.Substring(k, 10);
-                        int mi = Convert.ToInt32(v, 2);
-                        Decodificador.TryDecodificarMensaje(mi, out int vv);
-                        Console.Write($"{vv} ");
-                    }
-                    Console.WriteLine();
+                    //// Dump de todos los valores decodificados (debug)
+                    //for (int k = 0; k + 10 <= input.Length; k += 10)
+                    //{
+                    //    string v = input.Substring(k, 10);
+                    //    int mi = Convert.ToInt32(v, 2);
+                    //    Decodificador.TryDecodificarMensaje(mi, out int vv);
+                    //    Console.Write($"{vv} ");
+                    //}
+                    //Console.WriteLine();
 
                     if (i + 10 > input.Length)
                     {
@@ -476,8 +476,16 @@ namespace Dem_v2
 
                 case 116:
                     ECC.Add(form);
-                    i = General.Categoria(i, form, input, ECC);
+                    i = General.Categoria(i, form, input, ECC, out bool socorro);
+
+                    // AGREGAR: si socorro == true a donde demodulo
+
                     i = General.MMSI_2(i, input, ECC);
+
+                    if (socorro)
+                    {
+                        // MENSAJE_1 puede ser utilizado
+                    }
                     i = General.Mensaje_1(i, input, ECC);
                     byte h = 1;
                     i = General.Mensaje_2(i, input, ECC, h);
@@ -499,7 +507,7 @@ namespace Dem_v2
                         {
                             Console.WriteLine("EOS detectado");
                             if (i + 30 <= input.Length)
-                                Decodificador.checkecc(i, input, ECC);
+                                Decodificador.Mod2Sum7Bits(i, input, ECC);
                             else
                                 Console.WriteLine("Stream demasiado corto para leer ECC.");
                         }

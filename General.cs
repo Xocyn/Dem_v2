@@ -1,5 +1,6 @@
 ﻿using MathNet.Numerics.Providers.LinearAlgebra;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
@@ -8,12 +9,13 @@ namespace Dem_v2
 {
     internal class General
     {
-        static public int Categoria(int i, int form, string input, List<int> ECC)
+        static public int Categoria(int i, int form, string input, List<int> ECC, out bool socorro)
         {
             int j = 0;
             string ventana = input.Substring(i + 20, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+            socorro = false;
 
             if (form == valor) // es el primer format recibido
             {
@@ -24,17 +26,19 @@ namespace Dem_v2
                 Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
                 ECC.Add(valor);
                 if (valor == 108)
-                {
                     Console.WriteLine("Seguridad");
-                }
+
                 else if (valor == 110)
-                {
                     Console.WriteLine("Urgencia");
-                }
-                else
+
+                else if (valor == 112)
                 {
-                    Console.WriteLine("Categoria corrupta");
+                    Console.WriteLine("Socorro");
+                    socorro = true;
                 }
+                                
+                else
+                    Console.WriteLine("Categoria corrupta");
             }
             else // es el segundo format recibido
             {
@@ -44,18 +48,21 @@ namespace Dem_v2
                 mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
                 ECC.Add(valor);
-                if (valor == 108)
-                {
+                if (valor == 108)                
                     Console.WriteLine("Seguridad");
-                }
-                else if (valor == 110)
-                {
+                
+                else if (valor == 110)                
                     Console.WriteLine("Urgencia");
-                }
-                else
+
+                else if (valor == 112)
                 {
-                    Console.WriteLine("Categoria corrupta");
+                    Console.WriteLine("Socorro");
+                    socorro = true;
                 }
+
+                else                
+                    Console.WriteLine("Categoria corrupta");
+
             }
             j = i + 20;
             return j;
@@ -118,52 +125,52 @@ namespace Dem_v2
             switch (valor)
             {
                 case 100:
-                    Console.WriteLine("ALL MODES F3E/G3E TP"); ECC.Add(valor);
+                    Console.WriteLine("ALL MODES F3E/G3E TP");
                     break;
                 case 101:
-                    Console.WriteLine("DUPLEX F3E/G3E TP"); ECC.Add(valor);
+                    Console.WriteLine("DUPLEX F3E/G3E TP");
                     break;
                 case 103:
-                    Console.WriteLine("Interrogación secuencial"); ECC.Add(valor);
+                    Console.WriteLine("Interrogación secuencial");
                     break;
                 case 104:
-                    Console.WriteLine("Incapaz de cumplimentar"); ECC.Add(valor);
+                    Console.WriteLine("Incapaz de cumplimentar");
                     break;
                 case 105:
-                    Console.WriteLine("Fin de llamada"); ECC.Add(valor);
+                    Console.WriteLine("Fin de llamada");
                     break;
                 case 106:
-                    Console.WriteLine("Datos"); ECC.Add(valor);
+                    Console.WriteLine("Datos");
                     break;
                 case 109:
-                    Console.WriteLine("J3E TP"); ECC.Add(valor);
+                    Console.WriteLine("J3E TP");
                     break;
                 case 110:
-                    Console.WriteLine("ACK de socorro"); ECC.Add(valor);
+                    Console.WriteLine("ACK de socorro");
                     break;
                 case 112:
-                    Console.WriteLine("Retransmisión de socorro"); ECC.Add(valor);
+                    Console.WriteLine("Retransmisión de socorro");
                     break;
                 case 113:
-                    Console.WriteLine("F1B/J2B TTY-FEC"); ECC.Add(valor);
+                    Console.WriteLine("F1B/J2B TTY-FEC");
                     break;
                 case 115:
-                    Console.WriteLine("F1B/J2B TTY-ARQ"); ECC.Add(valor);
+                    Console.WriteLine("F1B/J2B TTY-ARQ");
                     break;
                 case 118:
-                    Console.WriteLine("Prueba"); ECC.Add(valor);
+                    Console.WriteLine("Prueba");
                     break;
                 case 121:
-                    Console.WriteLine("Actualización de resgistro de posición/ubicación del barco"); ECC.Add(valor);
+                    Console.WriteLine("Actualización de resgistro de posición/ubicación del barco");
                     break;
                 case 126:
-                    Console.WriteLine("Ninguna información"); ECC.Add(valor);
+                    Console.WriteLine("Ninguna información"); 
                     break;
                 default:
-                    Console.WriteLine("¿¿¿???"); ECC.Add(valor);
+                    Console.WriteLine("¿¿¿???");
                     break;
             }
-
+            ECC.Add(valor);
             i = i + 20;
 
             ventana = input.Substring(i, 10);
@@ -173,72 +180,73 @@ namespace Dem_v2
             switch (valor_2)
             {
                 case 100:
-                    Console.WriteLine("Sin motivo"); ECC.Add(valor_2);
+                    Console.WriteLine("Sin motivo");
                     break;
                 case 101:
-                    Console.WriteLine("Congestión en el centro de conmutación marítima"); ECC.Add(valor_2);
+                    Console.WriteLine("Congestión en el centro de conmutación marítima");
                     break;
                 case 102:
-                    Console.WriteLine("Ocupado"); ECC.Add(valor_2);
+                    Console.WriteLine("Ocupado");
                     break;
                 case 103:
-                    Console.WriteLine("Indicación de cola de espera"); ECC.Add(valor_2);
+                    Console.WriteLine("Indicación de cola de espera");
                     break;
                 case 104:
-                    Console.WriteLine("Estación prohibida"); ECC.Add(valor_2);
+                    Console.WriteLine("Estación prohibida");
                     break;
                 case 105:
-                    Console.WriteLine("No hay operador disponible"); ECC.Add(valor_2);
+                    Console.WriteLine("No hay operador disponible");
                     break;
                 case 106:
-                    Console.WriteLine("Operador temporalmente no disponible"); ECC.Add(valor_2);
+                    Console.WriteLine("Operador temporalmente no disponible");
                     break;
                 case 107:
-                    Console.WriteLine("Equipo desconectado"); ECC.Add(valor_2);
+                    Console.WriteLine("Equipo desconectado");
                     break;
                 case 108:
-                    Console.WriteLine("Incapaz de utilizar el canal propuesto"); ECC.Add(valor_2);
+                    Console.WriteLine("Incapaz de utilizar el canal propuesto");
                     break;
                 case 109:
-                    Console.WriteLine("Incapaz de utilizar el modo propuesto"); ECC.Add(valor_2);
+                    Console.WriteLine("Incapaz de utilizar el modo propuesto");
                     break;
                 case 110:
-                    Console.WriteLine("Barcos y aeronaves, de Estados que nos son parte de un conflicto armado"); ECC.Add(valor_2);
+                    Console.WriteLine("Barcos y aeronaves, de Estados que nos son parte de un conflicto armado");
                     break;
                 case 111:
-                    Console.WriteLine("Transportes médicos"); ECC.Add(valor_2);
+                    Console.WriteLine("Transportes médicos");
                     break;
                 case 112:
-                    Console.WriteLine("Oficina pública de llamada de previo pago"); ECC.Add(valor_2);
+                    Console.WriteLine("Oficina pública de llamada de previo pago");
                     break;
                 case 113:
-                    Console.WriteLine("Facsímil/datos"); ECC.Add(valor_2);
+                    Console.WriteLine("Facsímil/datos");
                     break;
                 case 120:
-                    Console.WriteLine("No queda transmisión secuencial de SCA"); ECC.Add(valor_2);
+                    Console.WriteLine("No queda transmisión secuencial de SCA");
                     break;
                 case 121:
-                    Console.WriteLine("1  vez la transmisión secuencial de SCA restante"); ECC.Add(valor_2);
+                    Console.WriteLine("1  vez la transmisión secuencial de SCA restante");
                     break;
                 case 122:
-                    Console.WriteLine("2  veces la transmisión secuencial de SCA restante"); ECC.Add(valor_2);
+                    Console.WriteLine("2  veces la transmisión secuencial de SCA restante");
                     break;
                 case 123:
-                    Console.WriteLine("3  veces la transmisión secuencial de SCA restante"); ECC.Add(valor_2);
+                    Console.WriteLine("3  veces la transmisión secuencial de SCA restante");
                     break;
                 case 124:
-                    Console.WriteLine("4  veces la transmisión secuencial de SCA restante"); ECC.Add(valor_2);
+                    Console.WriteLine("4  veces la transmisión secuencial de SCA restante");
                     break;
                 case 125:
-                    Console.WriteLine("5  veces la transmisión secuencial de SCA restante"); ECC.Add(valor_2);
+                    Console.WriteLine("5  veces la transmisión secuencial de SCA restante");
                     break;
                 case 126:
-                    Console.WriteLine("Ninguna información"); ECC.Add(valor_2);
+                    Console.WriteLine("Ninguna información");
                     break;
                 default:
-                    Console.WriteLine("¿¿¿???"); ECC.Add(valor_2);
+                    Console.WriteLine("¿¿¿???"); 
                     break;
             }
+            ECC.Add(valor_2);
             i = i + 20;
             j = i;
             return j;
@@ -248,7 +256,7 @@ namespace Dem_v2
             int j = 0;
 
             List<int> freq_canal = new List<int>();
-            for (int k = 0; k < 60; k += 10)
+            for (int k = 0; k < 80; k += 10) // 80 porque existe la posiblilidad de que sean 4 caracteres
             {
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
@@ -268,9 +276,11 @@ namespace Dem_v2
             //var resultado = Desagrupar(freq_canal);
 
             // Caso especial: 126
-            if (freq_canal[2] == 126)
+            if (freq_canal[2] == 126) // creo que me aseguro ya que si el caracter HM es 126, entonces no hay información de frecuencia o canal
             {
                 Console.WriteLine($"NO DATA: {string.Join(" | ", freq_canal)}");
+                j = i + 60;
+                ECC.RemoveAt(ECC.Count - 1);
             }
             else if (h == 1)
             {
@@ -279,22 +289,34 @@ namespace Dem_v2
                     case 0:
                     case 1:
                     case 2:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Informacion de Frecuencia de Recepcion");
-                        Console.WriteLine(string.Join(", ", freq_canal_digitos));
-                        //Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}.{freq_canal_digitos[4]}kHz");
+                        //Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}.{freq_canal_digitos[5]}kHz");
                         break;
 
                     case 3:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Informacion de canal MF/HF");
-                        Console.WriteLine("EN DESARROLLO");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
+                    case 4:
+                        j = i + 80;
+                        Console.WriteLine("Informacion de Frecuencia de Recepcion");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
+                        //Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        break;
+
+                    case 8:
                     case 9:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Canal de recepción VHF");
-                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     default:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Caracter HM no identificado");
                         Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
@@ -307,30 +329,42 @@ namespace Dem_v2
                     case 0:
                     case 1:
                     case 2:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Informacion de Frecuencia de Transmisión");
-                        Console.WriteLine(string.Join(", ", freq_canal_digitos));
-                        //Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}.{freq_canal_digitos[4]}kHz");
+                        //Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}.{freq_canal_digitos[5]}kHz");
                         break;
 
                     case 3:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Informacion de canal MF/HF");
-                        Console.WriteLine("EN DESARROLLO");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
+                    case 4:
+                        j = i + 80;
+                        Console.WriteLine("Informacion de Frecuencia de Transmisión");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
+                        //Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        break;
+
+                    case 8:
                     case 9:
-                        Console.WriteLine("Canal de transmisión VHF");
-                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}");
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
+                        Console.WriteLine("Canal de recepción VHF");
+                        Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     default:
+                        j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.WriteLine("Caracter HM no identificado");
+                        Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
 
                 }
 
             }
 
-            j = i + 60;
             return j;
         }
 
