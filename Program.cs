@@ -3,6 +3,7 @@ using NAudio.Wave;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -409,7 +410,6 @@ namespace Dem_v2
                 if (j == 1 && dxrxConfirmed)
                 {
                     formatConfirmed = true;
-                    //Console.WriteLine($"Format specifier confirmado: {form}");
                 }
             }
 
@@ -426,6 +426,7 @@ namespace Dem_v2
             switch (form)
             {
                 case 112:
+                    // SOCORRO
                     ECC.Add(form);
                     i = Socorro.MMSI(i, form, input, ECC);
                     i = Socorro.NatureofDistress(i, input, ECC);
@@ -443,7 +444,7 @@ namespace Dem_v2
                     i = Socorro.FirstTelecommand(i, input, ECC);
 
                     //// Dump de todos los valores decodificados (debug)
-                    //for (int k = 0; k + 10 <= input.Length; k += 10)
+                    //for (int k = i; k + 10 <= input.Length; k += 10)
                     //{
                     //    string v = input.Substring(k, 10);
                     //    int mi = Convert.ToInt32(v, 2);
@@ -475,6 +476,7 @@ namespace Dem_v2
                     break;
 
                 case 116:
+                    // ALL SHIPS
                     ECC.Add(form);
                     i = General.Categoria(i, form, input, ECC, out bool socorro);
 
@@ -521,8 +523,44 @@ namespace Dem_v2
                     // TODO: formato individual
                     break;
                 case 102:
-                    // TODO: formato geográfica
+                    // GEOGRAFICA
+                    ECC.Add(form);
+                    Socorro.TryLeer(input, i + 20, out int valor);
+                    if (form == valor) // es el primer format recibido
+                        i = i + 40;
+                    else
+                        i = i + 20;
+
+                    i = Geografica.AreaGeografica(i, input, ECC);
+                    i = General.Categoria2(i,input, ECC);
+                    i = General.MMSI_2(i, input, ECC);
+                    i = General.Mensaje_1(i, input, ECC);
+                    byte h1 = 1;
+                    i = General.Mensaje_2(i, input, ECC, h1);
+                    h1++;
+                    i = General.Mensaje_2(i, input, ECC, h1);
+
+                    if (i + 10 > input.Length)
+                    {
+                        Console.WriteLine("Mensaje incompleto (102): stream demasiado corto.");
+                        break;
+                    }
+                    {
+                        string win1 = input.Substring(i, 10);
+                        int ms1 = Convert.ToInt32(win1, 2);
+                        Decodificador.TryDecodificarMensaje(ms1, out int val1);
+                        ECC.Add(val1);
+                        if (val1 == 127)
+                        {
+                            Console.WriteLine("EOS detectado");
+                            if (i + 30 <= input.Length)
+                                Decodificador.Mod2Sum7Bits(i, input, ECC);
+                            else
+                                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                        }
+                    }
                     break;
+
                 case 123:
                     // TODO: formato individual2
                     break;

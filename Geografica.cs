@@ -9,12 +9,86 @@ namespace Dem_v2
 {
     internal class Geografica
     {
-        public static void AreaGeografica(int i, string input)
+        public static int AreaGeografica(int i, string input, List<int> ECC)
         {
             // obtengo latitud (paralelo al ecuador)
-
             // luego obtengo longitud (paralelo a greenwich)
+            int j = 0;
+            List<int> AreaGeo = new List<int>();
+            List<int> same = new List<int>();
+            List<int> fail = new List<int> { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+            string ventana;
+            int mensajeInt;
 
+            for (int k = 0; k < 100; k += 10)
+            {
+                ventana = input.Substring(i + k, 10);
+                mensajeInt = Convert.ToInt32(ventana, 2);
+                Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                AreaGeo.Add(valor);  // aca obtengo el 1234567890 ahora debo aplicar "mascaras" / elimino las posiciones impares
+                if (Decodificador.DxRx(input, i + k))
+                {
+                    same.Add(valor);
+                }
+            }
+
+            EliminarPosicionesImpares(AreaGeo);
+            bool mismoContenido = !AreaGeo.Except(same).Any() && !same.Except(AreaGeo).Any();
+
+            foreach (int vaal in AreaGeo)
+            {
+                ECC.Add(vaal);
+            }
+
+            // Ahora con AreaGeo puedo decodificar toda la data
+
+            // Formato lindo para cada uno de los valores NE/NW/SE/SW
+          
+            //string todos = string.Concat(AreaGeo.Select(n => n.ToString()));
+            string todos = string.Join("", AreaGeo.Select(x => x.ToString("D2")));
+
+            if (todos.Length < 10)
+            {
+                Console.WriteLine($"Ubicacion desconocida: {string.Join(" | ", fail)}");
+                return i + 100;
+            }
+
+            string referencia = todos.Substring(0, 1);
+            string lat = todos.Substring(1, 2);
+            string log = todos.Substring(3, 3);
+            string delta_lat = todos.Substring(6, 2);
+            string delta_log = todos.Substring(8, 2);
+
+            switch (referencia)
+            {
+                case "0":
+                    referencia = "NE";
+                    break;
+                case "1":
+                    referencia = "NW";
+                    break;
+                case "2":
+                    referencia = "SE";
+                    break;
+                case "3":
+                    referencia = "SW";
+                    break;
+                default:
+                    referencia = "??";
+                    break;
+            }
+
+            if (mismoContenido)
+            {
+                Console.WriteLine($"Ubicacion: {referencia} - Latitud {lat} + {delta_lat} ° - Longitud {log} + {delta_log} °");
+            }
+            else
+            {
+                Console.WriteLine($"Ubicacion desconocida: {string.Join(" | ", fail)}");
+            }
+
+            j = i + 100;
+            return j;
         }
 
         public static int PuntoGeografico(int i, string input, List<int> ECC, out bool valid) // lo uso para socorro (grados y minutos)
@@ -51,7 +125,9 @@ namespace Dem_v2
             // Formato lindo para cada uno de los valores NE/NW/SE/SW
             // AGREGAR: si no cumple con subtring's lanzar error o desconocido
 
-            string todos = string.Concat(PuntoGeo.Select(n => n.ToString()));
+            string todos = string.Join("", PuntoGeo.Select(x => x.ToString("D2")));
+
+            //string todos = string.Concat(PuntoGeo.Select(n => n.ToString()));
 
             if (todos.Length < 10)
             {
@@ -102,10 +178,6 @@ namespace Dem_v2
             j = i + 100;
             return j;
 
-
-
-
-
         }
 
         public static void EliminarPosicionesImpares(List<int> lista)
@@ -142,7 +214,9 @@ namespace Dem_v2
                 ECC.Add(val);
             }
 
-            Console.WriteLine($"Hora UTC: {string.Join(" | ", UTC)}");
+            string utc = string.Join(":", UTC.Select(x => x.ToString("D2")));
+
+            Console.WriteLine($"Hora UTC: {utc}");
             j = i + 40;
 
             return j;

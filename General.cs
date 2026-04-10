@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
+using System.Linq;
 
 namespace Dem_v2
 {
@@ -68,6 +69,23 @@ namespace Dem_v2
             return j;
         }
 
+        static public int Categoria2(int i, string input, List<int> ECC)
+        {
+            int j = 0;
+            string ventana = input.Substring(i, 10);
+            int mensajeInt = Convert.ToInt32(ventana, 2);
+            Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+            ECC.Add(valor);
+            if (valor == 108)
+                Console.WriteLine("Seguridad");
+            else if (valor == 110)
+                Console.WriteLine("Urgencia");
+            else
+                Console.WriteLine("Categoria corrupta");
+            j = i + 20;
+            return j;
+        }
+
         static public int MMSI_2(int i, string input, List<int> ECC)
         {
             int j = 0;
@@ -98,10 +116,12 @@ namespace Dem_v2
                 ECC.Add(valorMMSI);
             }
 
+            string mm = string.Join("", MMSI.Select(x => x.ToString("D2")));
+
             if (mismoContenido)
             {
                 Console.WriteLine("MMSI DX/RX coinciden");
-                Console.WriteLine($"MMSI: {string.Join(" | ", MMSI)}");
+                Console.WriteLine($"MMSI: {mm}");
 
             }
             else
@@ -270,8 +290,13 @@ namespace Dem_v2
                 ECC.Add(fc);
             }
 
+            List<string> FC = freq_canal
+            .Select(x => x.ToString("D2"))
+            .ToList();
+
             // quiero saber con que voy a laburar
-            List<int> freq_canal_digitos = SplitDigits(freq_canal);
+            //List<int> freq_canal_digitos = SplitDigits(freq_canal);
+            List<int> freq_canal_digitos = SplitDigits2(FC);
 
             //var resultado = Desagrupar(freq_canal);
 
@@ -383,6 +408,19 @@ namespace Dem_v2
 
             return result;
         }
+        public static List<int> SplitDigits2(List<string> input)
+        {
+            var result = new List<int>();
 
+            foreach (string item in input)
+            {
+                foreach (char c in item)
+                {
+                    result.Add(c - '0'); // convierte char a int
+                }
+            }
+
+            return result;
+        }
     }
 }

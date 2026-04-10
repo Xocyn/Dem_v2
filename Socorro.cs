@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Dem_v2
@@ -10,7 +11,7 @@ namespace Dem_v2
     internal class Socorro
     {
         // Helper: lee 10 bits desde input[i], devuelve false si no hay suficientes
-        private static bool TryLeer(string input, int i, out int valor)
+        public static bool TryLeer(string input, int i, out int valor)
         {
             valor = 0;
             if (i + 10 > input.Length) return false;
@@ -53,10 +54,12 @@ namespace Dem_v2
             foreach (int valorMMSI in MMSI)
                 ECC.Add(valorMMSI);
 
+            string mm = string.Join("",MMSI.Select(x => x.ToString("D2")));
+
             if (mismoContenido)
             {
                 Console.WriteLine("MMSI DX/RX coinciden");
-                Console.WriteLine($"MMSI: {string.Join(" | ", MMSI)}");
+                Console.WriteLine($"MMSI: {mm}");
             }
             else
             {
