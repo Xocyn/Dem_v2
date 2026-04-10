@@ -59,6 +59,9 @@ namespace Dem_v2
             string delta_lat = todos.Substring(6, 2);
             string delta_log = todos.Substring(8, 2);
 
+            int.TryParse(lat, out int latInt); int.TryParse(delta_lat, out int delta_latInt); int result = latInt+ delta_latInt;
+            int.TryParse(log, out int logInt); int.TryParse(delta_log, out int delta_logInt); int result2 = logInt + delta_logInt;
+
             switch (referencia)
             {
                 case "0":
@@ -80,7 +83,7 @@ namespace Dem_v2
 
             if (mismoContenido)
             {
-                Console.WriteLine($"Ubicacion: {referencia} - Latitud {lat} + {delta_lat} ° - Longitud {log} + {delta_log} °");
+                Console.WriteLine($"Ubicacion: {referencia} - Latitud {lat} .. {result} ° - Longitud {log} .. {result2} °");
             }
             else
             {

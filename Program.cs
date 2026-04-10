@@ -482,7 +482,8 @@ namespace Dem_v2
 
                     // AGREGAR: si socorro == true a donde demodulo
 
-                    i = General.MMSI_2(i, input, ECC);
+                    (i, string si_1) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"MMSI: {si_1}");
 
                     if (socorro)
                     {
@@ -501,6 +502,46 @@ namespace Dem_v2
                     }
 
                     {
+                        string win2 = input.Substring(i, 10);
+                        int ms2 = Convert.ToInt32(win2, 2);
+                        Decodificador.TryDecodificarMensaje(ms2, out int val2);
+                        ECC.Add(val2);
+                        if (val2 == 127)
+                        {
+                            Console.WriteLine("EOS detectado");
+                            if (i + 30 <= input.Length)
+                                Decodificador.Mod2Sum7Bits(i, input, ECC);
+                            else
+                                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                        }
+                    }
+                    break;
+
+                case 114:
+                    // GRUPO DE BARCOS
+                    ECC.Add(form);
+                    Socorro.TryLeer(input, i + 20, out int valor2);
+                    if (form == valor2) // es el primer format recibido
+                        i = i + 40;
+                    else
+                        i = i + 20;
+                    (i, string si) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"Para: {si}");
+                    i = General.Categoria2(i, input, ECC);
+                    (i, string si_3) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"Desde: {si_3}");
+                    i = General.Mensaje_1(i, input, ECC);
+                    byte h_3 = 1;
+                    i = General.Mensaje_2(i, input, ECC, h_3);
+                    h_3++;
+                    i = General.Mensaje_2(i, input, ECC, h_3);
+                    if (i + 10 > input.Length)
+                    {
+                        Console.WriteLine("Mensaje incompleto (114): stream demasiado corto.");
+                        break;
+                    }
+
+                    {
                         string win1 = input.Substring(i, 10);
                         int ms1 = Convert.ToInt32(win1, 2);
                         Decodificador.TryDecodificarMensaje(ms1, out int val1);
@@ -514,10 +555,7 @@ namespace Dem_v2
                                 Console.WriteLine("Stream demasiado corto para leer ECC.");
                         }
                     }
-                    break;
 
-                case 114:
-                    // TODO: formato grupo
                     break;
                 case 120:
                     // TODO: formato individual
@@ -533,7 +571,8 @@ namespace Dem_v2
 
                     i = Geografica.AreaGeografica(i, input, ECC);
                     i = General.Categoria2(i,input, ECC);
-                    i = General.MMSI_2(i, input, ECC);
+                    (i, string si_2) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"MMSI: {si_2}");
                     i = General.Mensaje_1(i, input, ECC);
                     byte h1 = 1;
                     i = General.Mensaje_2(i, input, ECC, h1);

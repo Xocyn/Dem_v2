@@ -80,18 +80,21 @@ namespace Dem_v2
                 Console.WriteLine("Seguridad");
             else if (valor == 110)
                 Console.WriteLine("Urgencia");
+            else if (valor == 100)
+                Console.WriteLine("Rutina");
             else
                 Console.WriteLine("Categoria corrupta");
             j = i + 20;
             return j;
         }
 
-        static public int MMSI_2(int i, string input, List<int> ECC)
+        static public (int, string) MMSI_2(int i, string input, List<int> ECC)
         {
+            string si;
             int j = 0;
             List<int> MMSI = new List<int>();
             List<int> same = new List<int>();
-            List<string> fail = new List<string> { "X", "X", "X", "X", "X", "X", "X", "X", "X" };
+            //List<string> fail = new List<string> { "X", "X", "X", "X", "X", "X", "X", "X", "X" };
             string ventana;
             int mensajeInt;
             int valor;
@@ -120,18 +123,19 @@ namespace Dem_v2
 
             if (mismoContenido)
             {
-                Console.WriteLine("MMSI DX/RX coinciden");
-                Console.WriteLine($"MMSI: {mm}");
-
+                //Console.WriteLine("MMSI DX/RX coinciden");
+                //Console.WriteLine($"MMSI: {mm}");
+                si = mm;
             }
             else
             {
-                Console.WriteLine("MMSI DX/RX NO coinciden");
-                Console.WriteLine($"MMSI desconocido: {string.Join(" | ", fail)}");
+                //Console.WriteLine("MMSI DX/RX NO coinciden");
+                //Console.WriteLine($"MMSI desconocido: {string.Join(" | ", fail)}");
+                si = "XXXXXXXXXX";
 
             }
             j = i + 100;
-            return j;
+            return (j,si);
         }
 
 
@@ -141,7 +145,7 @@ namespace Dem_v2
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-            Console.WriteLine("Primer Telecomando:");
+            Console.Write("Primer Telecomando: ");
             switch (valor)
             {
                 case 100:
@@ -196,7 +200,7 @@ namespace Dem_v2
             ventana = input.Substring(i, 10);
             mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor_2);
-            Console.WriteLine("Segundo Telecomando:");
+            Console.Write("Segundo Telecomando: ");
             switch (valor_2)
             {
                 case 100:
@@ -315,20 +319,20 @@ namespace Dem_v2
                     case 1:
                     case 2:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Informacion de Frecuencia de Recepcion");
+                        Console.Write("Informacion de Frecuencia de Recepcion: ");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}.{freq_canal_digitos[5]}kHz");
                         break;
 
                     case 3:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Informacion de canal MF/HF");
+                        Console.Write("Informacion de canal MF/HF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     case 4:
                         j = i + 80;
-                        Console.WriteLine("Informacion de Frecuencia de Recepcion");
+                        Console.Write("Informacion de Frecuencia de Recepcion: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
@@ -336,13 +340,13 @@ namespace Dem_v2
                     case 8:
                     case 9:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Canal de recepción VHF");
+                        Console.Write("Canal de recepción VHF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     default:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Caracter HM no identificado");
+                        Console.Write("Caracter HM no identificado: ");
                         Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
                 }
@@ -355,20 +359,20 @@ namespace Dem_v2
                     case 1:
                     case 2:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Informacion de Frecuencia de Transmisión");
+                        Console.Write("Informacion de Frecuencia de Transmisión: ");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}.{freq_canal_digitos[5]}kHz");
                         break;
 
                     case 3:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Informacion de canal MF/HF");
+                        Console.Write("Informacion de canal MF/HF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     case 4:
                         j = i + 80;
-                        Console.WriteLine("Informacion de Frecuencia de Transmisión");
+                        Console.Write("Informacion de Frecuencia de Transmisión: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
@@ -376,13 +380,13 @@ namespace Dem_v2
                     case 8:
                     case 9:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Canal de recepción VHF");
+                        Console.Write("Canal de recepción VHF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     default:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
-                        Console.WriteLine("Caracter HM no identificado");
+                        Console.Write("Caracter HM no identificado: ");
                         Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         break;
 

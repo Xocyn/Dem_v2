@@ -58,12 +58,12 @@ namespace Dem_v2
 
             if (mismoContenido)
             {
-                Console.WriteLine("MMSI DX/RX coinciden");
+                //Console.WriteLine("MMSI DX/RX coinciden");
                 Console.WriteLine($"MMSI: {mm}");
             }
             else
             {
-                Console.WriteLine("MMSI DX/RX NO coinciden");
+                //Console.WriteLine("MMSI DX/RX NO coinciden");
                 Console.WriteLine($"MMSI desconocido: {string.Join(" | ", fail)}");
             }
 

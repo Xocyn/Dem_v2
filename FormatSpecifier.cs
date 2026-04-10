@@ -19,7 +19,7 @@ namespace Dem_v2
             }
             else
             {
-                Console.WriteLine(Formato(f_msj));
+                Console.Write("Formato: "); Console.WriteLine(Formato(f_msj));
                 j = 1; // Salir del while
                 return f_msj;
             }
@@ -29,12 +29,12 @@ namespace Dem_v2
         {
             return valor switch
             {
-                112 => "Socorro",
-                116 => "AllShips",
-                114 => "Grupo",
-                120 => "Individual",
-                102 => "Geografica",
-                123 => "Individual2",
+                112 => "Socorro (112)",
+                116 => "AllShips (116)",
+                114 => "Llama a grupo de barcos (114)",
+                120 => "LLamada Individual (120)",
+                102 => "LLamada a Area Geografica (102)",
+                123 => "Individual2 (123)",
                 _ => "Valor no reconocido" // Caso por defecto
             };
         }
