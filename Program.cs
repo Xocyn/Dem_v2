@@ -215,12 +215,12 @@ namespace Dem_v2
                                         string ventana1 = decodeBuffer.ToString(w, 10);
                                         string ventana2 = decodeBuffer.ToString(w + 10, 10);
 
-                                        bool es127_1 = Decodificador.TryDeco(ventana1, out int val1) && val1 == 127;
-                                        bool es127_2 = Decodificador.TryDeco(ventana2, out int val2) && val2 == 127;
+                                        bool es127_1 = Decodificador.TryDeco(ventana1, out int val1) && (val1 == 127 || val1 == 117 || val1 == 122);
+                                        bool es127_2 = Decodificador.TryDeco(ventana2, out int val2) && (val2 == 127 || val2 == 117 || val2 == 122);
 
                                         if (es127_1 && es127_2)
                                         {
-                                            Console.WriteLine($"EOS CONSECUTIVO detectado en posición {w}: 127 + 127");
+                                            Console.WriteLine($"EOS CONSECUTIVO detectado en posición {w}: {val1} + {val2}");
                                             FinalizarCaptura("EOS");
                                             debeFinalizarLoop = true;
                                             break;
@@ -346,6 +346,7 @@ namespace Dem_v2
         {
             List<(int Index, int Value)> encontrados = new List<(int, int)>();
             int i = 0;
+            byte h = 1;
             bool sincronizado = false;
 
             // Ventana deslizante: busca y consume caracteres de phasing
@@ -489,11 +490,9 @@ namespace Dem_v2
                     {
                         // MENSAJE_1 puede ser utilizado
                     }
-                    i = General.Mensaje_1(i, input, ECC);
-                    byte h = 1;
-                    i = General.Mensaje_2(i, input, ECC, h);
-                    h++;
-                    i = General.Mensaje_2(i, input, ECC, h);
+                    (i, bool pos_4) = General.Mensaje_1(i, input, ECC);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
 
                     if (i + 10 > input.Length)
                     {
@@ -527,14 +526,12 @@ namespace Dem_v2
                         i = i + 20;
                     (i, string si) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"Para: {si}");
-                    i = General.Categoria2(i, input, ECC);
+                    (i, bool rutina_2) = General.Categoria2(i, input, ECC);
                     (i, string si_3) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"Desde: {si_3}");
-                    i = General.Mensaje_1(i, input, ECC);
-                    byte h_3 = 1;
-                    i = General.Mensaje_2(i, input, ECC, h_3);
-                    h_3++;
-                    i = General.Mensaje_2(i, input, ECC, h_3);
+                    (i, bool pos_3) = General.Mensaje_1(i, input, ECC);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
                     if (i + 10 > input.Length)
                     {
                         Console.WriteLine("Mensaje incompleto (114): stream demasiado corto.");
@@ -558,7 +555,65 @@ namespace Dem_v2
 
                     break;
                 case 120:
-                    // TODO: formato individual
+                    // INDIVIDUAL
+                    ECC.Add(form);
+                    Socorro.TryLeer(input, i + 20, out int valor_4);
+                    if (form == valor_4) // es el primer format recibido
+                        i = i + 40;
+                    else
+                        i = i + 20;
+                    (i, string si_2) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"Para: {si_2}");
+                    (i, bool rutina) = General.Categoria2(i, input, ECC);
+                    (i, string si_4) = General.MMSI_2(i, input, ECC);
+
+                    Console.WriteLine($"Desde: {si_4}");
+
+                    if (rutina)
+                    {
+                        (i, bool pos_5) = General.Mensaje_1(i, input, ECC);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    }
+                    else
+                    { 
+                        (i, bool pos) = General.Mensaje_1(i, input, ECC);
+
+                        if (pos)
+                        {
+                            i = Geografica.PuntoGeografico(i, input, ECC, out bool valid2);
+                            string win = input.Substring(i, 10); int ms = Convert.ToInt32(win, 2); Decodificador.TryDecodificarMensaje(ms, out int val);
+                            i += 20; ECC.Add(val); // DEBERIA SER UN 126
+                            i = Geografica.UTC(i, input, ECC);
+                        }
+                        else
+                        { 
+                            (i, h) = General.Mensaje_2(i, input, ECC, h);
+                            (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        }
+                    }
+
+                    if (i + 10 > input.Length)
+                    {
+                        Console.WriteLine("Mensaje incompleto (120): stream demasiado corto.");
+                        break;
+                    }
+
+                    {
+                        string win1 = input.Substring(i, 10);
+                        int ms1 = Convert.ToInt32(win1, 2);
+                        Decodificador.TryDecodificarMensaje(ms1, out int val1);
+                        ECC.Add(val1);
+                        if (val1 == 117 || val1 == 122)
+                        {
+                            Console.WriteLine("EOS detectado");
+                            if (i + 30 <= input.Length)
+                                Decodificador.Mod2Sum7Bits(i, input, ECC);
+                            else
+                                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                        }
+                    }
+
                     break;
                 case 102:
                     // GEOGRAFICA
@@ -570,14 +625,12 @@ namespace Dem_v2
                         i = i + 20;
 
                     i = Geografica.AreaGeografica(i, input, ECC);
-                    i = General.Categoria2(i,input, ECC);
-                    (i, string si_2) = General.MMSI_2(i, input, ECC);
-                    Console.WriteLine($"MMSI: {si_2}");
-                    i = General.Mensaje_1(i, input, ECC);
-                    byte h1 = 1;
-                    i = General.Mensaje_2(i, input, ECC, h1);
-                    h1++;
-                    i = General.Mensaje_2(i, input, ECC, h1);
+                    (i, bool rutina_3) = General.Categoria2(i,input, ECC);
+                    (i, string si_5) = General.MMSI_2(i, input, ECC);
+                    Console.WriteLine($"MMSI: {si_5}");
+                    (i, bool pos_2) = General.Mensaje_1(i, input, ECC);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    (i, h) = General.Mensaje_2(i, input, ECC, h);
 
                     if (i + 10 > input.Length)
                     {
@@ -601,7 +654,7 @@ namespace Dem_v2
                     break;
 
                 case 123:
-                    // TODO: formato individual2
+                    // INDIVIDUAL 2
                     break;
                 default:
                     Console.WriteLine("Formato no reconocido.");

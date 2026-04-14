@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
+using System.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Dem_v2
@@ -94,7 +95,7 @@ namespace Dem_v2
             return j;
         }
 
-        public static int PuntoGeografico(int i, string input, List<int> ECC, out bool valid) // lo uso para socorro (grados y minutos)
+        public static int PuntoGeografico(int i, string input, List<int> ECC, out bool valid) // lo uso para Socorro e Indididual (grados y minutos)
         {
             int j = 0;
             List<int> PuntoGeo = new List<int>();
@@ -121,6 +122,13 @@ namespace Dem_v2
             foreach (int vaal in PuntoGeo)
             {
                 ECC.Add(vaal);
+            }
+
+            if (TodosIguales(PuntoGeo)) // Caso ACK denegado
+            {
+                Console.WriteLine($"Petición de Posición denegada");
+                valid = false;
+                return i + 100;
             }
 
             // Ahora con PuntoGeo puedo decodificar toda la data
@@ -225,7 +233,13 @@ namespace Dem_v2
             return j;
         }
 
+        public static bool TodosIguales(List<int> lista)
+        {
+            if (lista == null || lista.Count == 0)
+                return false;
 
+            return lista.All(x => x == 126); 
+        }
 
     }
 }

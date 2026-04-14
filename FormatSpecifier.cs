@@ -34,7 +34,7 @@ namespace Dem_v2
                 114 => "Llama a grupo de barcos (114)",
                 120 => "LLamada Individual (120)",
                 102 => "LLamada a Area Geografica (102)",
-                123 => "Individual2 (123)",
+                123 => "Individual 2 (123)",
                 _ => "Valor no reconocido" // Caso por defecto
             };
         }

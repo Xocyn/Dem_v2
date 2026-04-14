@@ -69,8 +69,9 @@ namespace Dem_v2
             return j;
         }
 
-        static public int Categoria2(int i, string input, List<int> ECC)
+        static public (int, bool) Categoria2(int i, string input, List<int> ECC)
         {
+            bool rutina = false;
             int j = 0;
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
@@ -81,11 +82,14 @@ namespace Dem_v2
             else if (valor == 110)
                 Console.WriteLine("Urgencia");
             else if (valor == 100)
+            {
                 Console.WriteLine("Rutina");
+                rutina = true;
+            }   
             else
                 Console.WriteLine("Categoria corrupta");
             j = i + 20;
-            return j;
+            return (j,rutina);
         }
 
         static public (int, string) MMSI_2(int i, string input, List<int> ECC)
@@ -139,8 +143,9 @@ namespace Dem_v2
         }
 
 
-        static public int Mensaje_1(int i, string input, List<int> ECC)
+        static public (int, bool) Mensaje_1(int i, string input, List<int> ECC)
         {
+            bool pos = false;
             int j = 0;
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
@@ -186,6 +191,7 @@ namespace Dem_v2
                     break;
                 case 121:
                     Console.WriteLine("Actualización de resgistro de posición/ubicación del barco");
+                    pos = true;
                     break;
                 case 126:
                     Console.WriteLine("Ninguna información"); 
@@ -273,11 +279,17 @@ namespace Dem_v2
             ECC.Add(valor_2);
             i = i + 20;
             j = i;
-            return j;
+            return (j, pos);
         }
-        static public int Mensaje_2(int i, string input, List<int> ECC, byte h)
+        static public (int, byte) Mensaje_2(int i, string input, List<int> ECC, byte h)
         {
             int j = 0;
+
+            if (h == 44)
+            {
+                j = i; h = 1;
+                return (j, h);
+            }
 
             List<int> freq_canal = new List<int>();
             for (int k = 0; k < 80; k += 10) // 80 porque existe la posiblilidad de que sean 4 caracteres
@@ -288,6 +300,17 @@ namespace Dem_v2
                 freq_canal.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(freq_canal);
+
+
+            // Caso en el que exista Pos2 en Mensaje 2 //
+            if (freq_canal[0] == 55)
+            {
+                i += 20; ECC.Add(55);
+                i = Geografica.PuntoGeografico(i, input, ECC, out bool valid2);
+                j = i;
+                h = 44; // asigno un valor a h para que no se ejecute el bloque de código de frecuencia/canal
+                return (j, h);
+            }
 
             foreach (int fc in freq_canal)
             {
@@ -318,6 +341,7 @@ namespace Dem_v2
                     case 0:
                     case 1:
                     case 2:
+                        h=2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Informacion de Frecuencia de Recepcion: ");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
@@ -325,12 +349,14 @@ namespace Dem_v2
                         break;
 
                     case 3:
+                        h=2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Informacion de canal MF/HF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     case 4:
+                        h=2;
                         j = i + 80;
                         Console.Write("Informacion de Frecuencia de Recepcion: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
@@ -339,15 +365,17 @@ namespace Dem_v2
 
                     case 8:
                     case 9:
+                        h=2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Canal de recepción VHF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     default:
+                        h = 2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Caracter HM no identificado: ");
-                        Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        Console.WriteLine(string.Join(" ", freq_canal_digitos));
                         break;
                 }
             }
@@ -362,12 +390,14 @@ namespace Dem_v2
                         Console.Write("Informacion de Frecuencia de Transmisión: ");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
                         Console.WriteLine($"{freq_canal_digitos[0]}{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}.{freq_canal_digitos[5]}kHz");
+                        h = 1;
                         break;
 
                     case 3:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Informacion de canal MF/HF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
+                        h = 1;
                         break;
 
                     case 4:
@@ -375,6 +405,7 @@ namespace Dem_v2
                         Console.Write("Informacion de Frecuencia de Transmisión: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        h = 1;
                         break;
 
                     case 8:
@@ -382,19 +413,21 @@ namespace Dem_v2
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Canal de recepción VHF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
+                        h = 1;
                         break;
 
                     default:
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Caracter HM no identificado: ");
-                        Console.WriteLine(string.Join(", ", freq_canal_digitos));
+                        Console.WriteLine(string.Join(" ", freq_canal_digitos));
+                        h = 1;
                         break;
 
                 }
 
             }
 
-            return j;
+            return (j, h);
         }
 
         public static List<int> SplitDigits(List<int> input)
