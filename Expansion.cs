@@ -7,7 +7,7 @@ namespace Dem_v2
 {
     internal class Expansion
     {
-        public static int Especificador(int i, string input, List<int> ECC)
+        public static int Especificador(int i, string input)
         {
             //List<int> Expansion = new List<int>();
             //for (int k = i; k < input.Length; k += 10) 
@@ -19,6 +19,7 @@ namespace Dem_v2
             //}
 
             //Geografica.EliminarPosicionesImpares(Expansion); // Solo me quedo con los DX, no verifica RX
+            List<int> ECC = new List<int>();
 
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
@@ -62,6 +63,73 @@ namespace Dem_v2
             }
 
             // leer el caracter y si es EOS se va al final y sino es el Mensaje 2
+            string ventana2 = input.Substring(i, 10);
+            int mensajeInt2 = Convert.ToInt32(ventana2, 2);
+            Decodificador.TryDecodificarMensaje(mensajeInt2, out int valor2); ECC.Add(valor2);
+            i += 20;
+
+            if (valor2 == 127 || valor2 == 122 || valor2 == 117)
+            {
+                // EOS
+                Console.WriteLine("EOS detectado");
+                Decodificador.Mod2Sum7Bits(i, input, ECC);
+                return i;
+            }
+            else
+            {
+                switch (valor2)
+                {
+                    case 100:
+                        //  Resolusion mejorada de la posicion
+                        i = res_mejorada(i, input, ECC);
+                        break;
+                    case 101:
+                        // Origen y punto de referencia de posicion 
+                        i = origen_punto_ref(i, input, ECC);
+                        break;
+                    case 102:
+                        // Velocidad actual del barco
+                        i = velocidad_actual(i, input, ECC);
+                        break;
+                    case 103:
+                        // Ruta actual del barco
+                        i = ruta_actual(i, input, ECC);
+                        break;
+                    case 104:
+                        // Identificador adicional de la estacion
+                        i = identificador_adicional(i, input, ECC);
+                        break;
+                    case 105:
+                        // Zona geofrafica ampliada
+                        i = zona_geografica_ampliada(i, input, ECC);
+                        break;
+                    case 106:
+                        // Numero de personas a bordo
+                        i = numero_personas_a_bordo(i, input, ECC);
+                        break;
+                    default:
+                        // No identificado
+                        Console.WriteLine("Caracter no identificado");
+                        break;
+                }
+            }
+
+            string ventana3 = input.Substring(i, 10);
+            int mensajeInt3 = Convert.ToInt32(ventana3, 2);
+            Decodificador.TryDecodificarMensaje(mensajeInt3, out int valor3); ECC.Add(valor3);
+            i += 20;
+            // EOS
+            if (valor2 == 127 || valor2 == 122 || valor2 == 117)
+            {
+                // EOS
+                Console.WriteLine("EOS detectado");
+                Decodificador.Mod2Sum7Bits(i, input, ECC);
+                return i;
+            }
+            else
+            {
+                Console.WriteLine("Caracter no identificado");
+            }
 
             return i;
         }
@@ -77,10 +145,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                res.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(res); // Solo me quedo con los DX
+            foreach (int val in res)
+            {
+                ECC.Add(val);
+            }
 
             if (res[0] == 110)
             {
@@ -116,10 +187,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                og.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(og); // Solo me quedo con los DX
+            foreach (int val in og)
+            {
+                ECC.Add(val);
+            }
 
             if (og[0] == 110)
             {
@@ -203,9 +277,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                vel.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(vel); // Solo me quedo con los DX
+            foreach (int val in vel)
+            {
+                ECC.Add(val);
+            }
+
             if (vel[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
@@ -238,9 +316,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                ruta.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(ruta); // Solo me quedo con los DX
+            foreach (int val in ruta)
+            {
+                ECC.Add(val);
+            }
+
             if (ruta[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
@@ -272,9 +354,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                id.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(id); // Solo me quedo con los DX
+            foreach (int val in id)
+            {
+                ECC.Add(val);
+            }
+
             if (id[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
@@ -302,10 +388,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                zona.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(zona);
+            foreach (int val in zona)
+            {
+                ECC.Add(val);
+            }
 
             List<string> zona_i = zona
             .Select(x => x.ToString("D2"))
@@ -352,9 +441,13 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
-                personas.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(personas); // Solo me quedo con los DX
+            foreach (int val in personas)
+            {
+                ECC.Add(val);
+            }
+
             if (personas[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
@@ -371,7 +464,7 @@ namespace Dem_v2
             .Select(x => x.ToString("D2"))
             .ToList();
             List<int> personas_d = General.SplitDigits2(personas_i);
-            Console.WriteLine($"Numero de personas a bordo: {personas_d[0]}{personas_d[1]}{personas_d[2]}");
+            Console.WriteLine($"Numero de personas a bordo: {personas_d[0]}{personas_d[1]}{personas_d[2]}{personas_d[3]}");
             return i + 40;
         }
 

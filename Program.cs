@@ -67,7 +67,7 @@ namespace Dem_v2
 
             const string startPattern = "01010101010101010101"; // 20 bits
             int phasingStartOffset = 0;
-            int eosCount = 0;
+            bool extensionDetected = false;
 
             Estado estado = Estado.EsperandoInicio;
             int cooldownMs = 1000;
@@ -88,7 +88,8 @@ namespace Dem_v2
                     {
                         try
                         {
-                            ProcesarBits(bits);
+                            ProcesarBits(bits, extensionDetected);
+                            extensionDetected = false;
                         }
                         catch (Exception ex)
                         {
@@ -208,22 +209,40 @@ namespace Dem_v2
                                 // Buscar patrones de 20 bits que representen 127 + 127
                                 if (decodeBuffer.Length >= 20)
                                 {
-                                    // Recorrer el buffer con ventana de 20 bits
-                                    for (int w = 0; w <= decodeBuffer.Length - 20; w++)
+                                    // Recorrer el buffer con ventana de 40 bits
+                                    for (int w = 0; w <= decodeBuffer.Length - 60; w++)
                                     {
                                         // Extraer dos ventanas consecutivas de 10 bits
                                         string ventana1 = decodeBuffer.ToString(w, 10);
                                         string ventana2 = decodeBuffer.ToString(w + 10, 10);
+                                        string ventana3 = decodeBuffer.ToString(w + 40, 10); // Para extensiones
 
                                         bool es127_1 = Decodificador.TryDeco(ventana1, out int val1) && (val1 == 127 || val1 == 117 || val1 == 122);
                                         bool es127_2 = Decodificador.TryDeco(ventana2, out int val2) && (val2 == 127 || val2 == 117 || val2 == 122);
 
                                         if (es127_1 && es127_2)
                                         {
-                                            Console.WriteLine($"EOS CONSECUTIVO detectado en posición {w}: {val1} + {val2}");
-                                            FinalizarCaptura("EOS");
-                                            debeFinalizarLoop = true;
-                                            break;
+                                            // ext
+                                            if (Decodificador.TryDeco(ventana3, out int val3) && (100 <= val3 && val3 <= 106))
+                                            {
+                                                //Console.WriteLine($"Extensión detectada (valor: {val3})");
+                                                extensionDetected = true;
+                                                // Avanzar el buffer pasando los EOS + extensión (30 bits)
+                                                //decodeBuffer.Remove(0, w + 30);
+                                                //debeFinalizarLoop = true; // Salir del bucle sin finalizar captura
+                                                break;
+                                            }
+                                            else
+                                            {
+                                                FinalizarCaptura("EOS");
+                                                debeFinalizarLoop = true;
+                                                break;
+                                            }
+                                            // ext
+
+                                            //FinalizarCaptura("EOS");
+                                            //debeFinalizarLoop = true;
+                                            //break;
                                         }
                                     }
 
@@ -251,7 +270,7 @@ namespace Dem_v2
                     demod.LockPhase(ph);
                     inicioGrabacion = DateTime.Now;
                     estado = Estado.Grabando;
-                    eosCount = 0;
+                    //eosCount = 0;
                     phasingStartOffset = 0;
                     decodeBuffer.Clear();
                     bitAccumulator.Clear();
@@ -280,7 +299,7 @@ namespace Dem_v2
                     // Limpiar y entrar en cooldown
                     decodeBuffer.Clear();
                     bitAccumulator.Clear();
-                    eosCount = 0;
+                    //eosCount = 0;
                     estado = Estado.Cooldown;
                     cooldownHasta = DateTime.Now.AddMilliseconds(cooldownMs);
                 }
@@ -324,7 +343,7 @@ namespace Dem_v2
                         decodeBuffer.Clear();
                         bitAccumulator.Clear();
                         phasingStartOffset = 0;
-                        eosCount = 0;
+                        //eosCount = 0;
                     }
 
                     Console.WriteLine("Escuchando...");
@@ -342,7 +361,7 @@ namespace Dem_v2
         // ── ProcesarBits ─────────────────────────────────────────────────────────────
         // Este método corre SOLO en el thread de procesamiento. Puede tardar lo que quiera
         // sin afectar en absoluto la captura de audio.
-        public static bool ProcesarBits(string input)
+        public static bool ProcesarBits(string input, bool ext)
         {
             List<(int Index, int Value)> encontrados = new List<(int, int)>();
             int i = 0;
@@ -384,9 +403,9 @@ namespace Dem_v2
                 return false;
             }
 
-            Console.WriteLine("Phasing sequence encontrada:");
-            foreach (var e in encontrados)
-                Console.WriteLine($"  Offset {e.Index}: valor = {e.Value}");
+            //Console.WriteLine("Phasing sequence encontrada:");
+            //foreach (var e in encontrados)
+            //    Console.WriteLine($"  Offset {e.Index}: valor = {e.Value}");
 
             // ── Format specifier ─────────────────────────────────────────────────────
             bool formatConfirmed = false;
@@ -423,6 +442,17 @@ namespace Dem_v2
             i -= 10; // Retroceder para que el switch lea el format specifier
 
             List<int> ECC = new List<int>();
+            List<int> MENSAJE = new List<int>();
+
+            for (int k = i; k + 10 <= input.Length; k += 10)
+            {
+                string v = input.Substring(k, 10);
+                int mi = Convert.ToInt32(v, 2);
+                Decodificador.TryDecodificarMensaje(mi, out int vv);
+                MENSAJE.Add(vv);  // CAMBIO TODA MI LOGICA PARA TRABAJAR CON LISTAS ???
+                Console.Write($"{vv} ");
+            }
+            Console.WriteLine();
 
             switch (form)
             {
@@ -444,15 +474,7 @@ namespace Dem_v2
                     }
                     i = Socorro.FirstTelecommand(i, input, ECC);
 
-                    //// Dump de todos los valores decodificados (debug)
-                    //for (int k = i; k + 10 <= input.Length; k += 10)
-                    //{
-                    //    string v = input.Substring(k, 10);
-                    //    int mi = Convert.ToInt32(v, 2);
-                    //    Decodificador.TryDecodificarMensaje(mi, out int vv);
-                    //    Console.Write($"{vv} ");
-                    //}
-                    //Console.WriteLine();
+                    // Dump de todos los valores decodificados (debug)
 
                     if (i + 10 > input.Length)
                     {
@@ -659,6 +681,12 @@ namespace Dem_v2
                 default:
                     Console.WriteLine("Formato no reconocido.");
                     return false;
+            }
+
+            if (ext)
+            {
+                i += 80;
+                i = Expansion.Especificador(i, input);
             }
 
             return true;
