@@ -24,7 +24,8 @@ namespace Dem_v2
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor); ECC.Add(valor);
-            i += 20;
+            i = i + 20;
+            Console.WriteLine($"Formato de Extension ({valor})");
 
             switch (valor)
             {
@@ -66,7 +67,6 @@ namespace Dem_v2
             string ventana2 = input.Substring(i, 10);
             int mensajeInt2 = Convert.ToInt32(ventana2, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt2, out int valor2); ECC.Add(valor2);
-            i += 20;
 
             if (valor2 == 127 || valor2 == 122 || valor2 == 117)
             {
@@ -77,6 +77,7 @@ namespace Dem_v2
             }
             else
             {
+                i = i + 20;
                 switch (valor2)
                 {
                     case 100:
@@ -117,7 +118,6 @@ namespace Dem_v2
             string ventana3 = input.Substring(i, 10);
             int mensajeInt3 = Convert.ToInt32(ventana3, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt3, out int valor3); ECC.Add(valor3);
-            i += 20;
             // EOS
             if (valor2 == 127 || valor2 == 122 || valor2 == 117)
             {
@@ -145,6 +145,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                res.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(res); // Solo me quedo con los DX
@@ -156,13 +157,13 @@ namespace Dem_v2
             if (res[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (res[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
 
@@ -172,8 +173,8 @@ namespace Dem_v2
 
             List<int> res_D = General.SplitDigits2(res_I);
 
-            Console.WriteLine($"Mejora de Latitud ,{res_D[0]}{res_D[1]}{res_D[2]}{res_D[3]}'' ");
-            Console.WriteLine($"Mejora de Longitud ,{res_D[4]}{res_D[5]}{res_D[6]}{res_D[7]}'' ");
+            Console.WriteLine($"Mejora de Latitud {res_D[0]}{res_D[1]}{res_D[2]}{res_D[3]}'' ");
+            Console.WriteLine($"Mejora de Longitud {res_D[4]}{res_D[5]}{res_D[6]}{res_D[7]}'' ");
 
             return i + 80;
         }
@@ -187,6 +188,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                og.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(og); // Solo me quedo con los DX
@@ -198,13 +200,13 @@ namespace Dem_v2
             if (og[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (og[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
 
@@ -277,6 +279,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                vel.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(vel); // Solo me quedo con los DX
             foreach (int val in vel)
@@ -287,13 +290,13 @@ namespace Dem_v2
             if (vel[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (vel[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
 
@@ -316,6 +319,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                ruta.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(ruta); // Solo me quedo con los DX
             foreach (int val in ruta)
@@ -326,13 +330,13 @@ namespace Dem_v2
             if (ruta[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (ruta[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
 
@@ -354,6 +358,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                id.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(id); // Solo me quedo con los DX
             foreach (int val in id)
@@ -364,13 +369,13 @@ namespace Dem_v2
             if (id[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (id[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
 
@@ -388,6 +393,7 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                zona.Add(valor);
             }
 
             Geografica.EliminarPosicionesImpares(zona);
@@ -441,8 +447,10 @@ namespace Dem_v2
                 string ventana = input.Substring(i + k, 10);
                 int mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+                personas.Add(valor);
             }
             Geografica.EliminarPosicionesImpares(personas); // Solo me quedo con los DX
+
             foreach (int val in personas)
             {
                 ECC.Add(val);
@@ -451,20 +459,26 @@ namespace Dem_v2
             if (personas[0] == 110)
             {
                 Console.WriteLine("Peticion de datos");
-                i += 20;
+                i = i + 20;
                 return i;
             }
             else if (personas[0] == 126)
             {
                 Console.WriteLine("Ningun dato disponible");
-                i += 20;
+                i = i + 20;
                 return i;
             }
-            List<string> personas_i = personas
-            .Select(x => x.ToString("D2"))
-            .ToList();
-            List<int> personas_d = General.SplitDigits2(personas_i);
-            Console.WriteLine($"Numero de personas a bordo: {personas_d[0]}{personas_d[1]}{personas_d[2]}{personas_d[3]}");
+
+            //List<string> personas_i = personas
+            //.Select(x => x.ToString("D2"))
+            //.ToList();
+            //List<int> personas_d = General.SplitDigits2(personas_i);
+            //Console.WriteLine($"Numero de personas a bordo: {personas_d[0]}{personas_d[1]}{personas_d[2]}{personas_d[3]}");
+
+            string ppol = string.Join("", personas.Select(x => x.ToString("D2")));
+            Console.WriteLine($"Numero de personas a bordo: {ppol}");
+
+
             return i + 40;
         }
 

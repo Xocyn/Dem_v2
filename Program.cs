@@ -685,7 +685,7 @@ namespace Dem_v2
 
             if (ext)
             {
-                i += 80;
+                i = i + 80;
                 i = Expansion.Especificador(i, input);
             }
 
