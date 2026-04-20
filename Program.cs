@@ -222,14 +222,12 @@ namespace Dem_v2
 
                                         if (es127_1 && es127_2)
                                         {
-                                            // ext
                                             if (Decodificador.TryDeco(ventana3, out int val3) && (100 <= val3 && val3 <= 106))
                                             {
-                                                //Console.WriteLine($"Extensión detectada (valor: {val3})");
                                                 extensionDetected = true;
-                                                // Avanzar el buffer pasando los EOS + extensión (30 bits)
-                                                //decodeBuffer.Remove(0, w + 30);
-                                                //debeFinalizarLoop = true; // Salir del bucle sin finalizar captura
+                                                // Remover los bits ya procesados (dos EOS + extensión = 30 bits)
+                                                // decodeBuffer.Remove(0, w + 30);
+                                                // Salir del bucle for para reintentar con el nuevo buffer
                                                 break;
                                             }
                                             else
@@ -238,7 +236,6 @@ namespace Dem_v2
                                                 debeFinalizarLoop = true;
                                                 break;
                                             }
-                                            // ext
 
                                             //FinalizarCaptura("EOS");
                                             //debeFinalizarLoop = true;
