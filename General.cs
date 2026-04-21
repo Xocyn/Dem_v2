@@ -37,7 +37,7 @@ namespace Dem_v2
                     Console.WriteLine("Socorro");
                     socorro = true;
                 }
-                                
+
                 else
                     Console.WriteLine("Categoria corrupta");
             }
@@ -49,10 +49,10 @@ namespace Dem_v2
                 mensajeInt = Convert.ToInt32(ventana, 2);
                 Decodificador.TryDecodificarMensaje(mensajeInt, out valor);
                 ECC.Add(valor);
-                if (valor == 108)                
+                if (valor == 108)
                     Console.WriteLine("Seguridad");
-                
-                else if (valor == 110)                
+
+                else if (valor == 110)
                     Console.WriteLine("Urgencia");
 
                 else if (valor == 112)
@@ -61,7 +61,7 @@ namespace Dem_v2
                     socorro = true;
                 }
 
-                else                
+                else
                     Console.WriteLine("Categoria corrupta");
 
             }
@@ -69,14 +69,16 @@ namespace Dem_v2
             return j;
         }
 
-        static public (int, bool) Categoria2(int i, string input, List<int> ECC)
+        static public (int, bool, bool) Categoria2(int i, string input, List<int> ECC)
         {
+            bool socorro = false;
             bool rutina = false;
             int j = 0;
             string ventana = input.Substring(i, 10);
             int mensajeInt = Convert.ToInt32(ventana, 2);
             Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
             ECC.Add(valor);
+            Console.Write($"Categoria de llamada {valor}: ");
             if (valor == 108)
                 Console.WriteLine("Seguridad");
             else if (valor == 110)
@@ -85,11 +87,16 @@ namespace Dem_v2
             {
                 Console.WriteLine("Rutina");
                 rutina = true;
-            }   
+            }
+            else if (valor == 112)
+            {
+                Console.WriteLine("Retransmisión de Socorro");
+                socorro = true;
+            }
             else
                 Console.WriteLine("Categoria corrupta");
             j = i + 20;
-            return (j,rutina);
+            return (j, rutina, socorro);
         }
 
         static public (int, string) MMSI_2(int i, string input, List<int> ECC)
@@ -139,7 +146,7 @@ namespace Dem_v2
 
             }
             j = i + 100;
-            return (j,si);
+            return (j, si);
         }
 
 
@@ -194,7 +201,7 @@ namespace Dem_v2
                     pos = true;
                     break;
                 case 126:
-                    Console.WriteLine("Ninguna información"); 
+                    Console.WriteLine("Ninguna información");
                     break;
                 default:
                     Console.WriteLine("¿¿¿???");
@@ -273,7 +280,7 @@ namespace Dem_v2
                     Console.WriteLine("Ninguna información");
                     break;
                 default:
-                    Console.WriteLine("¿¿¿???"); 
+                    Console.WriteLine("¿¿¿???");
                     break;
             }
             ECC.Add(valor_2);
@@ -341,7 +348,7 @@ namespace Dem_v2
                     case 0:
                     case 1:
                     case 2:
-                        h=2;
+                        h = 2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Informacion de Frecuencia de Recepcion: ");
                         //Console.WriteLine(string.Join(", ", freq_canal_digitos));
@@ -349,14 +356,14 @@ namespace Dem_v2
                         break;
 
                     case 3:
-                        h=2;
+                        h = 2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Informacion de canal MF/HF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
                         break;
 
                     case 4:
-                        h=2;
+                        h = 2;
                         j = i + 80;
                         Console.Write("Informacion de Frecuencia de Recepcion: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}.{freq_canal_digitos[6]}{freq_canal_digitos[7]}kHz");
@@ -365,7 +372,7 @@ namespace Dem_v2
 
                     case 8:
                     case 9:
-                        h=2;
+                        h = 2;
                         j = i + 60; ECC.RemoveAt(ECC.Count - 1);
                         Console.Write("Canal de recepción VHF: ");
                         Console.WriteLine($"{freq_canal_digitos[1]}{freq_canal_digitos[2]}{freq_canal_digitos[3]}{freq_canal_digitos[4]}{freq_canal_digitos[5]}");
@@ -458,6 +465,29 @@ namespace Dem_v2
             }
 
             return result;
+        }
+
+        static public int Retransmision(int i, string input, List<int> ECC)
+        {
+            string ventana = input.Substring(i, 10);
+            int mensajeInt = Convert.ToInt32(ventana, 2);
+            Decodificador.TryDecodificarMensaje(mensajeInt, out int valor);
+            Console.Write($"Categoria de llamada {valor}: ");
+            switch (valor)
+            {
+                case 110:
+                    Console.WriteLine("ACK de socorro");
+                    break;
+                case 112:
+                    Console.WriteLine("Retransmisión de socorro");
+                    break;
+                default:
+                    Console.WriteLine("¿¿¿???");
+                    break;
+            }
+            ECC.Add(valor);
+            i = i + 20;
+            return i;
         }
     }
 }

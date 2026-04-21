@@ -88,7 +88,7 @@ namespace Dem_v2
                     {
                         try
                         {
-                            ProcesarBits(bits, extensionDetected);
+                            Procesamiento.Procesar(bits, extensionDetected);
                             extensionDetected = false;
                         }
                         catch (Exception ex)
@@ -226,7 +226,7 @@ namespace Dem_v2
                                             {
                                                 extensionDetected = true;
                                                 // Remover los bits ya procesados (dos EOS + extensión = 30 bits)
-                                                // decodeBuffer.Remove(0, w + 30);
+                                                // decodeBuffer.Remove(0, w);
                                                 // Salir del bucle for para reintentar con el nuevo buffer
                                                 break;
                                             }
@@ -503,34 +503,76 @@ namespace Dem_v2
                     // AGREGAR: si socorro == true a donde demodulo
 
                     (i, string si_1) = General.MMSI_2(i, input, ECC);
-                    Console.WriteLine($"MMSI: {si_1}");
+                    Console.WriteLine($"MMSI Transmisor: {si_1}");
 
                     if (socorro)
                     {
-                        // MENSAJE_1 puede ser utilizado
-                    }
-                    (i, bool pos_4) = General.Mensaje_1(i, input, ECC);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        i = General.Retransmision(i, input, ECC);
+                        (i, string sm) = General.MMSI_2(i, input, ECC);
+                        Console.WriteLine($"MMSI Socorro: {sm}");
+                        i = Socorro.NatureofDistress(i, input, ECC);
+                        i = Geografica.PuntoGeografico(i, input, ECC, out bool valid_2);
+                        if (valid_2)
+                        {
+                            i = Geografica.UTC(i, input, ECC);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Hora: 88 88");
+                            i += 40;
+                            ECC.Add(88); ECC.Add(88);
+                        }
+                        i = Socorro.FirstTelecommand(i, input, ECC);
 
-                    if (i + 10 > input.Length)
-                    {
-                        Console.WriteLine("Mensaje incompleto (116): stream demasiado corto.");
+                        // Dump de todos los valores decodificados (debug)
+
+                        if (i + 10 > input.Length)
+                        {
+                            Console.WriteLine("Mensaje incompleto (112): stream demasiado corto.");
+                            break;
+                        }
+
+                        {
+                            string win = input.Substring(i, 10);
+                            int ms = Convert.ToInt32(win, 2);
+                            Decodificador.TryDecodificarMensaje(ms, out int val);
+                            ECC.Add(val);
+                            if (val == 127)
+                            {
+                                Console.WriteLine("EOS detectado");
+                                if (i + 30 <= input.Length)
+                                    Decodificador.Mod2Sum7Bits(i, input, ECC);
+                                else
+                                    Console.WriteLine("Stream demasiado corto para leer ECC.");
+                            }
+                        }
                         break;
                     }
-
+                    else
                     {
-                        string win2 = input.Substring(i, 10);
-                        int ms2 = Convert.ToInt32(win2, 2);
-                        Decodificador.TryDecodificarMensaje(ms2, out int val2);
-                        ECC.Add(val2);
-                        if (val2 == 127)
+                        (i, bool pos_4) = General.Mensaje_1(i, input, ECC);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+
+                        if (i + 10 > input.Length)
                         {
-                            Console.WriteLine("EOS detectado");
-                            if (i + 30 <= input.Length)
-                                Decodificador.Mod2Sum7Bits(i, input, ECC);
-                            else
-                                Console.WriteLine("Stream demasiado corto para leer ECC.");
+                            Console.WriteLine("Mensaje incompleto (116): stream demasiado corto.");
+                            break;
+                        }
+
+                        {
+                            string win2 = input.Substring(i, 10);
+                            int ms2 = Convert.ToInt32(win2, 2);
+                            Decodificador.TryDecodificarMensaje(ms2, out int val2);
+                            ECC.Add(val2);
+                            if (val2 == 127)
+                            {
+                                Console.WriteLine("EOS detectado");
+                                if (i + 30 <= input.Length)
+                                    Decodificador.Mod2Sum7Bits(i, input, ECC);
+                                else
+                                    Console.WriteLine("Stream demasiado corto para leer ECC.");
+                            }
                         }
                     }
                     break;
@@ -545,12 +587,37 @@ namespace Dem_v2
                         i = i + 20;
                     (i, string si) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"Para: {si}");
-                    (i, bool rutina_2) = General.Categoria2(i, input, ECC);
+                    (i, bool rutina_2, bool socorro_2) = General.Categoria2(i, input, ECC);
                     (i, string si_3) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"Desde: {si_3}");
-                    (i, bool pos_3) = General.Mensaje_1(i, input, ECC);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+
+                    if (socorro_2)
+                    {
+                        i = General.Retransmision(i,input, ECC);
+                        (i, string sm) = General.MMSI_2(i, input, ECC);
+                        Console.WriteLine($"MMSI Socorro: {sm}");
+                        i = Socorro.NatureofDistress(i, input, ECC);
+                        i = Geografica.PuntoGeografico(i, input, ECC, out bool valid3);
+                        if (valid3)
+                        {
+                            i = Geografica.UTC(i, input, ECC);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Hora: 88 88");
+                            i += 40;
+                            ECC.Add(88); ECC.Add(88);
+                        }
+                        i = Socorro.FirstTelecommand(i, input, ECC);
+
+                    }
+                    else
+                    {
+                        (i, bool pos_3) = General.Mensaje_1(i, input, ECC);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    }
+
                     if (i + 10 > input.Length)
                     {
                         Console.WriteLine("Mensaje incompleto (114): stream demasiado corto.");
@@ -583,7 +650,7 @@ namespace Dem_v2
                         i = i + 20;
                     (i, string si_2) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"Para: {si_2}");
-                    (i, bool rutina) = General.Categoria2(i, input, ECC);
+                    (i, bool rutina, bool socorro_1) = General.Categoria2(i, input, ECC);
                     (i, string si_4) = General.MMSI_2(i, input, ECC);
 
                     Console.WriteLine($"Desde: {si_4}");
@@ -593,6 +660,25 @@ namespace Dem_v2
                         (i, bool pos_5) = General.Mensaje_1(i, input, ECC);
                         (i, h) = General.Mensaje_2(i, input, ECC, h);
                         (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    }
+                    else if (socorro_1)
+                    {
+                        i = General.Retransmision(i, input, ECC);
+                        (i, string sm) = General.MMSI_2(i, input, ECC);
+                        Console.WriteLine($"MMSI Socorro: {sm}");
+                        i = Socorro.NatureofDistress(i, input, ECC);
+                        i = Geografica.PuntoGeografico(i, input, ECC, out bool valid3);
+                        if (valid3)
+                        {
+                            i = Geografica.UTC(i, input, ECC);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Hora: 88 88");
+                            i += 40;
+                            ECC.Add(88); ECC.Add(88);
+                        }
+                        i = Socorro.FirstTelecommand(i, input, ECC);
                     }
                     else
                     { 
@@ -644,12 +730,35 @@ namespace Dem_v2
                         i = i + 20;
 
                     i = Geografica.AreaGeografica(i, input, ECC);
-                    (i, bool rutina_3) = General.Categoria2(i,input, ECC);
+                    (i, bool rutina_3, bool socorro_3) = General.Categoria2(i,input, ECC);
+
                     (i, string si_5) = General.MMSI_2(i, input, ECC);
                     Console.WriteLine($"MMSI: {si_5}");
-                    (i, bool pos_2) = General.Mensaje_1(i, input, ECC);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
-                    (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    if (socorro_3)
+                    {
+                        i = General.Retransmision(i, input, ECC);
+                        (i, string sm) = General.MMSI_2(i, input, ECC);
+                        Console.WriteLine($"MMSI Socorro: {sm}");
+                        i = Socorro.NatureofDistress(i, input, ECC);
+                        i = Geografica.PuntoGeografico(i, input, ECC, out bool valid3);
+                        if (valid3)
+                        {
+                            i = Geografica.UTC(i, input, ECC);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Hora: 88 88");
+                            i += 40;
+                            ECC.Add(88); ECC.Add(88);
+                        }
+                        i = Socorro.FirstTelecommand(i, input, ECC);
+                    }
+                    else
+                    {
+                        (i, bool pos_2) = General.Mensaje_1(i, input, ECC);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                        (i, h) = General.Mensaje_2(i, input, ECC, h);
+                    }
 
                     if (i + 10 > input.Length)
                     {

@@ -39,6 +39,21 @@ namespace Dem_v2
             };
         }
 
+        public static int Filtro2(int f_msj, out int j)
+        {
+            j = 0; // Inicializar obligatoriamente
+
+            if (PhasingSequence.TryCaracter(f_msj))
+            {
+                j = 0; // Mantener el While
+                return 0;
+            }
+            else
+            {
+                j = 1; // Salir del while
+                return f_msj;
+            }
+        }
     }
 }
 

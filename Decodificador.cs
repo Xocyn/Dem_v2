@@ -7,33 +7,6 @@ namespace Dem_v2
 {
     internal class Decodificador
     {
-        public static int DecodificarMensaje(int mensaje10Bits)
-        {
-            // 1. Extraer campos
-            int datos = mensaje10Bits >> 3;        // 7 bits de datos
-            int control = mensaje10Bits & 0b111;     // 3 bits de control
-            int valor = 0;
-            int ceros = 0;
-
-            // 2. Contar ceros en los 7 bits de datos y reconstruir carácter
-            for (int i = 0; i < 7; i++)
-            {
-                int bit = (datos >> i) & 1;   // lee LSB → MSB
-                valor |= bit << (6 - i);      // asigna peso invertido
-                if (((datos >> i) & 1) == 0)
-                    ceros++;
-            }
-
-            // 3. Verificar control de errores
-            if (ceros != control)
-                Console.WriteLine("Error de control: cantidad de ceros incorrecta");
-
-            // 4. Devuelve el valor del carácter
-            return valor;
-        }
-
-        // Nuevo: versión "try" que indica si el mensaje de 10 bits es válido.
-        // Devuelve true si la verificación de control coincide y sale el valor reconstruido.
         public static bool TryDecodificarMensaje(int mensaje10Bits, out int valor)
         {
             int datos = mensaje10Bits >> 3;        // 7 bits de datos
@@ -182,6 +155,60 @@ namespace Dem_v2
             {
                 Console.WriteLine("Error en ECC: calculado=" + result + " recibido=" + valor);
                 return false;
+            }
+        }
+
+        public static void Mensaje(string input, int i, out List<int> Message)
+        {
+            Message = new List<int>();
+
+            for (int k = i; k + 10 <= input.Length; k += 10)
+            {
+                string ventana = input.Substring(k, 10);
+                int mensaje10Bits = Convert.ToInt32(ventana, 2);
+
+                int datos = mensaje10Bits >> 3;
+                int control = mensaje10Bits & 0b111;
+                int val = 0, ceros = 0;
+
+                for (int h = 0; h < 7; h++)
+                {
+                    int bit = (datos >> h) & 1;
+                    val |= bit << (6 - h);
+                    if (bit == 0) ceros++;
+                }
+
+                // DX válido → agregar y continuar
+                if (ceros == control)
+                {
+                    Message.Add(val);
+                    continue;
+                }
+
+                // DX inválido → intentar con RX (k + 50)
+                int kRx = k + 50;
+                if (kRx + 10 > input.Length)
+                {
+                    // RX fuera de rango: no hay forma de recuperar este valor
+                    Message.Add(0);
+                    continue;
+                }
+
+                string ventana2 = input.Substring(kRx, 10);
+                int mensajeInt2 = Convert.ToInt32(ventana2, 2);
+                int datos2 = mensajeInt2 >> 3;
+                int control2 = mensajeInt2 & 0b111;
+                int val2 = 0, ceros2 = 0;
+
+                for (int h = 0; h < 7; h++)
+                {
+                    int bit = (datos2 >> h) & 1;
+                    val2 |= bit << (6 - h);
+                    if (bit == 0) ceros2++;
+                }
+
+                // RX válido → usar su valor; RX inválido → marcar como 0
+                Message.Add(ceros2 == control2 ? val2 : 0);
             }
         }
 
