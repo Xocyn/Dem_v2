@@ -489,5 +489,33 @@ namespace Dem_v2
             i = i + 20;
             return i;
         }
+
+
+        static public string newMMSI(List<int> mensaje, int i)
+        {
+            string mmsi;
+            bool mismoContenido = true;
+            List <int> MMSI = new List<int>();
+
+            for (int k = i; k < i + 10; k += 1)
+            {
+                if (k % 2 == 0)  // Verifica si k es par
+                {
+                    int valor = mensaje[k];
+
+                    if (valor == mensaje[k + 5])
+                        MMSI.Add(valor);
+                    else
+                        mismoContenido = false;
+                }
+            }
+
+            if (mismoContenido)
+                mmsi = string.Join("", MMSI.Select(x => x.ToString("D2")));
+            else
+                mmsi = "XXXXXXXXXX";
+
+            return mmsi;
+        }
     }
 }

@@ -102,7 +102,7 @@ namespace Dem_v2
                     //MetodoGeografica();
                     break;
                 case 112:
-                    Metodos.Socorro(MENSAJE);
+                    Metodos.MSocorro(MENSAJE);
                     break;
                 case 114:
                     //MetodoGrupos();
@@ -169,30 +169,61 @@ namespace Dem_v2
 
     internal class Metodos
     {
-        public static void Geografica()
+        public static void MGeografica()
         {
             Console.WriteLine("Procesando mensaje de tipo Geográfica...");
             // Implementar lógica específica para mensajes de tipo Geográfica
         }
 
-        public static void Socorro(List<int> mensaje)
+        public static void MSocorro(List<int> mensaje)
         {
             int format = 0;
+            string mmsi = string.Empty;
+            int tipoEmergencia = 0;
+            List<int> coords= new List<int>();
+            bool sigoutc = false;
+            string utc = string.Empty;
+            int sig_comunicaciones = 0;
             // Segun la norma debo recibir 2 veces el caracter de formato para evitar falsas alarmas
             if (mensaje[0] == mensaje[2])
                 format = mensaje[0];
             else 
                 return;
+        
+            mmsi = General.newMMSI(mensaje, 4); // El MMSI empieza en la posición 4 del mensaje (después de los 4 caracteres de encabezado)
+            // Luego de 10 caracteres que conienten la informacion del MMSI, el mensaje de socorro tiene un caracter que indica el tipo de emergencia (posicion 14 del mensaje)
+            tipoEmergencia = mensaje[14];
+            
+            (coords, sigoutc) = Geografica.Coordenadas(mensaje, 16); // 16 + 10
 
+            if(sigoutc)
+            {
+                utc = Geografica.newUTC(mensaje, 26);
+            }
+            else
+            {
+                utc = "88:88"; // Manejar error o coordenadas inválidas
+            }
+
+            // 30 comunicaciones siguiente
+            sig_comunicaciones = mensaje[30];
+            
+            Console.WriteLine();
+            Console.WriteLine($"Formato: {FormatSpecifier.Formato(format)}");
+            Console.WriteLine($"MMSI: {mmsi}");
+            Console.WriteLine($"Tipo de Emergencia: {Socorro.Peligro(tipoEmergencia)}");
+            Console.WriteLine($"Coordenadas: {Geografica.Posicion(coords)}"); // DESARROLLAR METODO PARA POSICIONES
+            Console.WriteLine($"UTC: {utc}");
+            Console.WriteLine($"Siguiente Comunicación: {Socorro.PosteriorCom(sig_comunicaciones)}");
 
         }
 
-        public static void Grupos()
+        public static void MGrupos()
         {
             Console.WriteLine("Procesando mensaje de tipo Grupos...");
             // Implementar lógica específica para mensajes de tipo Grupos
         }
-        public static void AllShips()
+        public static void MAllShips()
         {
             Console.WriteLine("Procesando mensaje de tipo All Ships...");
             // Implementar lógica específica para mensajes de tipo All Ships

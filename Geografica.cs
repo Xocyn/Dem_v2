@@ -44,7 +44,7 @@ namespace Dem_v2
             // Ahora con AreaGeo puedo decodificar toda la data
 
             // Formato lindo para cada uno de los valores NE/NW/SE/SW
-          
+
             //string todos = string.Concat(AreaGeo.Select(n => n.ToString()));
             string todos = string.Join("", AreaGeo.Select(x => x.ToString("D2")));
 
@@ -60,7 +60,7 @@ namespace Dem_v2
             string delta_lat = todos.Substring(6, 2);
             string delta_log = todos.Substring(8, 2);
 
-            int.TryParse(lat, out int latInt); int.TryParse(delta_lat, out int delta_latInt); int result = latInt+ delta_latInt;
+            int.TryParse(lat, out int latInt); int.TryParse(delta_lat, out int delta_latInt); int result = latInt + delta_latInt;
             int.TryParse(log, out int logInt); int.TryParse(delta_log, out int delta_logInt); int result2 = logInt + delta_logInt;
 
             switch (referencia)
@@ -238,7 +238,93 @@ namespace Dem_v2
             if (lista == null || lista.Count == 0)
                 return false;
 
-            return lista.All(x => x == 126); 
+            return lista.All(x => x == 126);
+        }
+
+
+
+        public static (List<int>, bool) Coordenadas(List<int> mensaje, int i)
+        {
+            bool mismoContenido = true;
+            List<int> CORDENADAS = new List<int>();
+            List<int> FAIL = new List<int> { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+
+            for (int k = i; k < i + 10; k += 1)
+            {
+                if (k % 2 == 0)  // Verifica si k es par
+                {
+                    int valor = mensaje[k];
+
+                    if (valor == mensaje[k + 5])
+                        CORDENADAS.Add(valor);
+                    else
+                        mismoContenido = false;
+                }
+            }
+
+            if (mismoContenido)
+                return (CORDENADAS, true);
+            else
+                return (FAIL, false);
+
+        }
+
+        public static string newUTC(List<int> mensaje, int i)
+        {
+            string utc = string.Empty;
+            List<int> UTC = new List<int>();
+
+            for (int k = i; k < i + 4; k += 1)
+            {
+                if (k % 2 == 0)  // Verifica si k es par
+                {
+                    int valor = mensaje[k];
+                    UTC.Add(valor);
+                }
+            }
+
+            utc = string.Join(":", UTC.Select(x => x.ToString("D2")));
+
+            return utc;
+        }
+
+        public static string Posicion(List<int> coords)
+        {
+            string s = string.Empty;
+
+            if (coords.Count == 5) // Pos1
+            {
+                string todos = string.Join("", coords.Select(x => x.ToString("D2")));
+                string referencia = todos.Substring(0, 1);
+                string lat_g = todos.Substring(1, 2);
+                string lat_m = todos.Substring(3, 2);
+                string long_g = todos.Substring(5, 3);
+                string long_m = todos.Substring(8, 2);
+
+                switch (referencia)
+                {
+                    case "0":
+                        referencia = "NE";
+                        break;
+                    case "1":
+                        referencia = "NW";
+                        break;
+                    case "2":
+                        referencia = "SE";
+                        break;
+                    case "3":
+                        referencia = "SW";
+                        break;
+                    default:
+                        referencia = "??";
+                        break;
+                }
+
+                s = $"{referencia} - Latitud {lat_g}° {lat_m}' - Longitud {long_g}° {long_m}'";
+                return s;
+            }
+
+            return s;
         }
 
     }
