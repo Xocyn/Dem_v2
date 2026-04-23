@@ -99,7 +99,7 @@ namespace Dem_v2
             switch (MENSAJE[0])
             {
                 case 102:
-                    //MetodoGeografica();
+                    Metodos.MGeografica(MENSAJE);
                     break;
                 case 112:
                     Metodos.MSocorro(MENSAJE);
@@ -108,10 +108,10 @@ namespace Dem_v2
                     //MetodoGrupos();
                     break;
                 case 116:
-                    //MetodoAllShips();
+                    Metodos.MAllShips(MENSAJE);
                     break;
                 case 120:
-                    //MetodoIndividual();
+                    Metodos.MIndividual(MENSAJE);
                     break;
                 case 123:
                     //MetodoAutomatico(); //ESTE LO TENGO QUE DESARROLLAR ???
@@ -169,10 +169,49 @@ namespace Dem_v2
 
     internal class Metodos
     {
-        public static void MGeografica()
+        public static void MGeografica(List<int> mensaje) // SOLO MF/HF !!!
         {
-            Console.WriteLine("Procesando mensaje de tipo Geográfica...");
-            // Implementar lógica específica para mensajes de tipo Geográfica
+            string mmsi = string.Empty;
+            string area = string.Empty;
+            string categoria = string.Empty;
+            string primer_tel, segundo_tel = string.Empty; 
+            string frec_canal_1, frec_canal_2 = string.Empty;
+            bool ocho, ocho2 = false;
+            bool canal, canal2 = false;
+
+            area = Geografica.Area(mensaje,4); // El área geográfica empieza en la posición 4 del mensaje (después de los 4 caracteres de encabezado)
+            categoria = General.Categoria(mensaje[14]); // Luego de 10 caracteres que contienen la informacion del área geográfica (posicion 14 del mensaje)
+            mmsi = General.newMMSI(mensaje, 16); // El MMSI empieza en la posición 16 del mensaje (después de los 14 caracteres de encabezado)
+            primer_tel = General.PrimerTelemando(mensaje[26]); // Luego de 10 caracteres que contienen la informacion del MMSI (posicion 26 del mensaje)
+            segundo_tel = General.SegundoTelemando(mensaje[28]); // Luego de 2 caracteres que contienen la informacion del primer telemando (posicion 28 del mensaje)
+            (frec_canal_1, ocho, canal) = General.FrecuenciaCanal(mensaje, 30); // Luego de 2 caracteres que contienen la informacion del segundo telemando (posicion 30 del mensaje)
+            if (ocho)
+                (frec_canal_2, ocho2, canal2) = General.FrecuenciaCanal(mensaje, 38); // Luego de 8 caracteres que contienen la informacion del primer canal o frecuencia (posicion 38 del mensaje)
+            else
+                (frec_canal_2, ocho2, canal2) = General.FrecuenciaCanal(mensaje, 36); // Luego de 6 caracteres que contienen la informacion del primer canal o frecuencia (posicion 32 del mensaje)
+            
+            Console.WriteLine();
+            Console.WriteLine($"Formato: {FormatSpecifier.Formato(mensaje[0])}");
+            Console.WriteLine($"Área Geográfica: {area}");
+            Console.WriteLine($"Categoría: {categoria}");
+            Console.WriteLine($"MMSI: {mmsi}");
+            Console.WriteLine($"Primer Telemando: {primer_tel}");
+            Console.WriteLine($"Segundo Telemando: {segundo_tel}");
+            if (canal)
+                Console.WriteLine($"Canal Rx: {frec_canal_1}");
+            else
+                Console.WriteLine($"Frecuencia Rx: {frec_canal_1}");
+            if (canal2)
+                Console.WriteLine($"Canal Tx: {frec_canal_2}");
+            else
+                Console.WriteLine($"Frecuencia Tx: {frec_canal_2}");
+
+        }
+
+        public static void MIndividual(List<int> mensaje)
+        {
+
+            
         }
 
         public static void MSocorro(List<int> mensaje)
@@ -223,10 +262,44 @@ namespace Dem_v2
             Console.WriteLine("Procesando mensaje de tipo Grupos...");
             // Implementar lógica específica para mensajes de tipo Grupos
         }
-        public static void MAllShips()
+        public static void MAllShips(List<int> mensaje)
         {
-            Console.WriteLine("Procesando mensaje de tipo All Ships...");
-            // Implementar lógica específica para mensajes de tipo All Ships
+            int format = mensaje[0];
+            string mmsi = string.Empty;
+            string categoria = string.Empty;
+            string primer_tel = string.Empty;
+            string segundo_tel = string.Empty;
+            string frec_canal_1 = string.Empty;
+            string frec_canal_2 = string.Empty; 
+            bool ocho, ocho2 = false;
+            bool canal, canal2 = false;
+
+            categoria = General.Categoria(mensaje[4]);
+            mmsi = General.newMMSI(mensaje, 6); // El MMSI empieza en la posición 6 del mensaje (después de los 4 caracteres de encabezado)
+            // Luego de 10 caracteres que contienen la informacion del MMSI (posicion 16 del mensaje)
+            primer_tel= General.PrimerTelemando (mensaje[16]);
+            segundo_tel= General.SegundoTelemando (mensaje[18]);
+            (frec_canal_1, ocho, canal) = General.FrecuenciaCanal(mensaje, 20);
+            if (ocho)
+                (frec_canal_2, ocho2, canal2) = General.FrecuenciaCanal(mensaje, 28);
+            else
+                (frec_canal_2, ocho2, canal2) = General.FrecuenciaCanal(mensaje, 26);
+
+
+            Console.WriteLine();
+            Console.WriteLine($"Formato: {FormatSpecifier.Formato(format)}");
+            Console.WriteLine($"MMSI: {mmsi}");
+            Console.WriteLine($"Categoría: {categoria}");
+            Console.WriteLine($"Primer Telemando: {primer_tel}");
+            Console.WriteLine($"Segundo Telemando: {segundo_tel}");
+            if (canal)
+                Console.WriteLine($"Canal Rx: {frec_canal_1}");
+            else
+                Console.WriteLine($"Frecuencia Rx: {frec_canal_1}");
+            if (canal2)
+                Console.WriteLine($"Canal Tx: {frec_canal_2}");
+            else
+                Console.WriteLine($"Frecuencia Tx: {frec_canal_2}");
         }
     }
 }

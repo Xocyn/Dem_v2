@@ -327,5 +327,53 @@ namespace Dem_v2
             return s;
         }
 
+        public static string Area(List<int> area, int i)
+        {
+            string area_string = string.Empty;
+            List<int> coords = new List<int>();
+
+
+            for (int k = i; k < i + 10; k += 1)
+            {
+                if (k % 2 == 0)  // Verifica si k es par
+                {
+                    coords.Add(area[k]); // Solo agrego los DX
+                }
+            }
+
+            if (coords.Count == 5)
+            {
+                string todos = string.Join("", coords.Select(x => x.ToString("D2")));
+                string referencia = todos.Substring(0, 1);
+                string lat = todos.Substring(1, 2);
+                string log = todos.Substring(3, 3);
+                string delta_lat = todos.Substring(6, 2);
+                string delta_log = todos.Substring(8, 2);
+                int.TryParse(lat, out int latInt); int.TryParse(delta_lat, out int delta_latInt); int result = latInt + delta_latInt;
+                int.TryParse(log, out int logInt); int.TryParse(delta_log, out int delta_logInt); int result2 = logInt + delta_logInt;
+                switch (referencia)
+                {
+                    case "0":
+                        referencia = "NE";
+                        break;
+                    case "1":
+                        referencia = "NW";
+                        break;
+                    case "2":
+                        referencia = "SE";
+                        break;
+                    case "3":
+                        referencia = "SW";
+                        break;
+                    default:
+                        referencia = "??";
+                        break;
+                }
+                area_string = $"{referencia} - Latitud {lat} .. {result} ° - Longitud {log} .. {result2} °";
+                return area_string;
+            }
+            return area_string;
+
+        }
     }
 }
