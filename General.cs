@@ -518,8 +518,10 @@ namespace Dem_v2
             return mmsi;
         }
 
-        public static string PrimerTelemando(int valor)
+        public static string PrimerTelemando(int valor, out bool posicion)
         {
+            posicion = valor == 121;
+
             return valor switch
             {
                 100 => "Todos los modos F3E/G3E TP",
@@ -529,14 +531,14 @@ namespace Dem_v2
                 105 => "Fin de llamada",
                 106 => "Datos",
                 109 => "J3E TP",
-                110 => "Acuese de recibo de socorro",
+                110 => "Acuse de recibo de socorro",
                 112 => "Retransmisión de alerta de socorro",
                 113 => "F1B/J2B TTY-FEC",
                 115 => "F1B/J2B TTY-ARQ",
                 118 => "Prueba",
                 121 => "Actualización del registro de posición o ubicación del barco",
                 126 => "Ninguna información",
-                _ => "¿?" // Caso por defecto
+                _ => "¿?"
             };
         }
 
@@ -581,15 +583,27 @@ namespace Dem_v2
             };
         }
 
-        public static (string, bool, bool) FrecuenciaCanal(List<int> mensaje, int i)
+        public static string ACK(int valor)
+        {
+            return valor switch
+            {
+                117 => "Esperando ACK",
+                122 => "ACK",
+                127 => "EOS",
+                _ => "¿?" // Caso por defecto
+            };
+        }
+
+        public static (string, bool, bool) FrecuenciaCanal(List<int> mensaje, int i, out bool posicion)
         {
             string frec_canal = string.Empty;
             bool ocho_caracteres = false;
             bool canal = false;
+            posicion = false;
             List<int> mensaje_canal = new List<int>();
 
 
-            for (int k = i; k < i + 8; k += 1)
+            for (int k = i; k < i + 12; k += 1)
             {
                 if (k % 2 == 0)  // Verifica si k es par
                 {
@@ -602,6 +616,13 @@ namespace Dem_v2
                 frec_canal = "Sin información";
                 return (frec_canal, ocho_caracteres, canal);
             }
+            if ((mensaje_canal[0] == 55)) // caso especial de Pos2 en mensaje 2
+            {
+                mensaje_canal.RemoveAt(0); // elimino el 55 para que no me moleste en la decodificacion de la posicion geografica
+                frec_canal = Geografica.Posicion(mensaje_canal);
+                posicion= true;
+                return (frec_canal, ocho_caracteres, canal);
+            } 
 
             List<int> mensaje_separado = Separar(mensaje_canal);
 

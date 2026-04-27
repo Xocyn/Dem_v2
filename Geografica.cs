@@ -324,6 +324,47 @@ namespace Dem_v2
                 return s;
             }
 
+            if (coords[0] == 126) //Pos4 (ACK denegado)
+            {
+                s = $"Petición de Posición denegada";
+            }
+            else // Pos4 
+            {
+                string todos = string.Join("", coords.Select(x => x.ToString("D2")));
+                string referencia = todos.Substring(0, 1);
+                string lat_g = todos.Substring(1, 2);
+                string lat_m = todos.Substring(3, 2);
+                string long_g = todos.Substring(5, 3);
+                string long_m = todos.Substring(8, 2);
+
+                switch (referencia)
+                {
+                    case "0":
+                        referencia = "NE";
+                        break;
+                    case "1":
+                        referencia = "NW";
+                        break;
+                    case "2":
+                        referencia = "SE";
+                        break;
+                    case "3":
+                        referencia = "SW";
+                        break;
+                    default:
+                        referencia = "??";
+                        break;
+                }
+
+                s = $"{referencia} - Latitud {lat_g}° {lat_m}' - Longitud {long_g}° {long_m}'";
+                return s;
+            }
+
+            if (coords[0] ==55)
+            {
+                s = $"Ubicacion desconocida";
+            }
+
             return s;
         }
 
