@@ -7,24 +7,6 @@ namespace Dem_v2
 {
     internal static class FormatSpecifier
     {
-        // necesito filtrar primero los valores que pueden quedar del phasing
-        public static int Filtro(int f_msj, out int j)
-        {
-            j = 0; // Inicializar obligatoriamente
-
-            if (PhasingSequence.TryCaracter(f_msj))
-            {
-                j = 0; // Mantener el While
-                return 0;
-            }
-            else
-            {
-                Console.Write("Formato: "); Console.WriteLine(Formato(f_msj));
-                j = 1; // Salir del while
-                return f_msj;
-            }
-        }
-
         public static string Formato(int valor)
         {
             return valor switch
