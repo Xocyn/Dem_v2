@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,6 +7,39 @@ namespace Dem_v2
 {
     internal class Procesamiento
     {
+        /// <summary>
+        /// Muestra un menú de confirmación para responder a un mensaje de socorro
+        /// </summary>
+        /// <returns>true si el usuario selecciona Y, false si selecciona N</returns>
+        public static bool MostrarMenuSocorro()
+        {
+            while (true)
+            {
+                Console.WriteLine();
+                Console.WriteLine("╔══════════════════════════════════════=══╗");
+                Console.WriteLine("║  ¿Desea responder el mensaje de S.O.S?  ║");
+                Console.WriteLine("╚═══════════════════════════════════════=═╝");
+                Console.Write("Ingrese (Y/N): ");
+
+                string input = Console.ReadLine()?.ToUpper().Trim();
+
+                if (input == "Y" || input == "y")
+                {
+                    Console.WriteLine("Respondiendo mensaje de socorro...");
+                    return true;
+                }
+                else if (input == "N" || input == "n")
+                {
+                    Console.WriteLine("Mensaje de socorro ignorado.");
+                    return false;
+                }
+                else
+                {
+                    Console.WriteLine("Entrada inválida. Por favor ingrese Y o N.");
+                }
+            }
+        }
+
         public static void Procesar(string input, bool ext)
         {
             List<(int Index, int Value)> encontrados = new List<(int, int)>();
@@ -74,16 +108,15 @@ namespace Dem_v2
 
             List<int> MENSAJE = MESSAGE.ToList();
             List<int> ECC = MESSAGE.ToList();
+            List<int> datos_respuesta = new List<int>();
 
             string mensaje_string = string.Join(" ", MENSAJE.Select(x => x.ToString("D2")));
             Console.Write("MENSAJE: ");
             Console.WriteLine(mensaje_string);
 
             Geografica.EliminarPosicionesImpares(ECC); // Obtengo los DX
-            ECC = PrepararECC(ECC);
-            //string ecc_string = string.Join(" ", ECC.Select(x => x.ToString("D2")));
-            //Console.Write("Para calculo de ECC :");
-            //Console.WriteLine(ecc_string);
+
+            ECC = PrepararECC(ECC); // ESTO NO ME VA A SERVIR PARA LAS EXPANSIONES
 
             if (VerificarECC(MENSAJE, ECC))
             {
@@ -101,7 +134,12 @@ namespace Dem_v2
                     Metodos.MGeografica(MENSAJE);
                     break;
                 case 112:
-                    Metodos.MSocorro(MENSAJE);
+                    datos_respuesta = Metodos.MSocorro(MENSAJE);
+                    // Mostrar menú de confirmación para responder al S.O.
+                    if (MostrarMenuSocorro())
+                    {
+                        Respuesta.RespuestaSocorro(datos_respuesta);
+                    }
                     break;
                 case 114:
                     Metodos.MGrupos(MENSAJE);
@@ -120,7 +158,6 @@ namespace Dem_v2
             }
 
         }
-
 
         public static bool VerificarECC(List<int> MESSAGE, List<int> ECC)
         {
@@ -378,25 +415,26 @@ namespace Dem_v2
             }
         }
         // ── SOCORRO ─────────────────────────────────────────────────────
-        public static void MSocorro(List<int> mensaje)
+        public static List<int> MSocorro(List<int> mensaje)
         {
             int format = 0;
             string mmsi = string.Empty;
-            int tipoEmergencia = 0;
+            string tipoEmergencia = string.Empty;
             List<int> coords= new List<int>();
             bool sigoutc = false;
             string utc = string.Empty;
             int sig_comunicaciones = 0;
             string ack = string.Empty;
+
             // Segun la norma debo recibir 2 veces el caracter de formato para evitar falsas alarmas
             if (mensaje[0] == mensaje[2])
                 format = mensaje[0];
             else 
-                return;
+                return new List<int>();
         
             mmsi = General.newMMSI(mensaje, 4); // El MMSI empieza en la posición 4 del mensaje (después de los 4 caracteres de encabezado)
             // Luego de 10 caracteres que conienten la informacion del MMSI, el mensaje de socorro tiene un caracter que indica el tipo de emergencia (posicion 14 del mensaje)
-            tipoEmergencia = mensaje[14];
+            tipoEmergencia = Socorro.Peligro(mensaje[14]);
             
             (coords, sigoutc) = Geografica.Coordenadas(mensaje, 16); // 16 + 10
 
@@ -416,12 +454,14 @@ namespace Dem_v2
             Console.WriteLine();
             Console.WriteLine($"Formato: {FormatSpecifier.Formato(format)}");
             Console.WriteLine($"MMSI: {mmsi}");
-            Console.WriteLine($"Tipo de Emergencia: {Socorro.Peligro(tipoEmergencia)}");
+            Console.WriteLine($"Tipo de Emergencia: {tipoEmergencia}");
             Console.WriteLine($"Coordenadas: {Geografica.Posicion(coords)}"); // DESARROLLAR METODO PARA POSICIONES
             Console.WriteLine($"UTC: {utc}");
             Console.WriteLine($"Siguiente Comunicación: {Socorro.PosteriorCom(sig_comunicaciones)}");
             Console.WriteLine(ack);
 
+            List<int> respuesta = mensaje.GetRange(4,28);
+            return respuesta;
         }
         // ── GRUPOS ─────────────────────────────────────────────────────
         public static void MGrupos(List<int> mensaje)

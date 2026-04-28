@@ -210,36 +210,36 @@ namespace Dem_v2
                                 if (decodeBuffer.Length >= 20)
                                 {
                                     // Recorrer el buffer con ventana de 40 bits
-                                    for (int w = 0; w <= decodeBuffer.Length - 60; w++)
+                                    for (int w = 0; w <= decodeBuffer.Length - 40; w++)
                                     {
                                         // Extraer dos ventanas consecutivas de 10 bits
                                         string ventana1 = decodeBuffer.ToString(w, 10);
                                         string ventana2 = decodeBuffer.ToString(w + 10, 10);
-                                        string ventana3 = decodeBuffer.ToString(w + 40, 10); // Para extensiones
+                                        //string ventana3 = decodeBuffer.ToString(w + 40, 10); // Para extensiones
 
                                         bool es127_1 = Decodificador.TryDeco(ventana1, out int val1) && (val1 == 127 || val1 == 117 || val1 == 122);
                                         bool es127_2 = Decodificador.TryDeco(ventana2, out int val2) && (val2 == 127 || val2 == 117 || val2 == 122);
 
                                         if (es127_1 && es127_2)
                                         {
-                                            if (Decodificador.TryDeco(ventana3, out int val3) && (100 <= val3 && val3 <= 106))
-                                            {
-                                                extensionDetected = true;
-                                                // Remover los bits ya procesados (dos EOS + extensión = 30 bits)
-                                                // decodeBuffer.Remove(0, w);
-                                                // Salir del bucle for para reintentar con el nuevo buffer
-                                                break;
-                                            }
-                                            else
-                                            {
-                                                FinalizarCaptura("EOS");
-                                                debeFinalizarLoop = true;
-                                                break;
-                                            }
+                                            //if (Decodificador.TryDeco(ventana3, out int val3) && (100 <= val3 && val3 <= 106))
+                                            //{
+                                            //    extensionDetected = true;
+                                            //    // Remover los bits ya procesados (dos EOS + extensión = 30 bits)
+                                            //    // decodeBuffer.Remove(0, w);
+                                            //    // Salir del bucle for para reintentar con el nuevo buffer
+                                            //    break;
+                                            //}
+                                            //else
+                                            //{
+                                            //    FinalizarCaptura("EOS");
+                                            //    debeFinalizarLoop = true;
+                                            //    break;
+                                            //}
 
-                                            //FinalizarCaptura("EOS");
-                                            //debeFinalizarLoop = true;
-                                            //break;
+                                            FinalizarCaptura("EOS");
+                                            debeFinalizarLoop = true;
+                                            break;
                                         }
                                     }
 
